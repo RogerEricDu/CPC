@@ -17,8 +17,19 @@ export default {
   data() {
     return {
       pubList: [
-        {name:'A pangenome reference of 36 Chinese populations',citation: 'https://www.nature.com/articles/s41586-023-06173-7', url: 'https://www.nature.com/articles/s41586-023-06173-7'},
+        {
+          name: 'A pangenome reference of 36 Chinese populations',
+          citation: 'https://www.nature.com/articles/s41586-023-06173-7',
+          url: 'https://www.nature.com/articles/s41586-023-06173-7'
+        },
         // {citation: 'publication B', url: 'https://www.baidu.com'},
+        {
+          name: 'Long-read sequencing of 945 Han individuals identifies structural variants associated with phenotypic diversity and disease susceptibility',
+          citation: 'https://www.nature.com/articles/s41467-025-56661-9',
+          url: 'https://www.nature.com/articles/s41467-025-56661-9'
+        },
+
+
       ]
     }
   },

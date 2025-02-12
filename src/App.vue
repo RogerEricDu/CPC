@@ -23,6 +23,8 @@
           <p style="color:#606266; "> | </p>
           <router-link active-class="nav-link-active" to="/conferenceTalks">Conference Talks</router-link>
           <p style="color:#606266; "> | </p>
+          <router-link active-class="nav-link-active" to="/news">News</router-link>
+          <p style="color:#606266; "> | </p>
           <router-link active-class="nav-link-active" to="/about">About</router-link>
         </div>
       </div>
