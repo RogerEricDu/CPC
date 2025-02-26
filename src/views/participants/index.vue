@@ -308,6 +308,9 @@ export default {
         {name: 'Yingbing Shi', img: require("@/assets/img/participants/shiyingbing.jpeg")},
         {name: 'Hao Sun', img: require("@/assets/img/participants/Hao Sun.jpeg")},
         {name: 'Chuangxue Mao', img: require("@/assets/img/participants/maochuangxue.jpeg")},
+        {name: 'Guanlin Wang', img: require("@/assets/img/participants/wangguanlin.jpeg")},
+        {name: 'Qi Liu', img: require("@/assets/img/participants/liuqi.jpeg")},
+        {name: 'Chuanchao Wang', img: require("@/assets/img/participants/wangchuanchao.jpeg")},
 
 
 
