@@ -267,6 +267,8 @@ export default {
         {name: 'Yan Lu', img: require("@/assets/img/participants/YanLu.jpg")},
         //  2
         {name: 'Jian Yang', img: require("@/assets/img/participants/yangjian.jpeg")},
+        {name: 'Feng Zhang', img: require("@/assets/img/participants/zhangfeng.jpg")},
+
         {name: 'Qiang Gao', img: require("@/assets/img/participants/QiangGao.png")},
         {name: 'Shaoyuan Wu', img: require("@/assets/img/participants/ShaoyuanWu.jpg")},
         {name: 'Yafei Mao', img: require("@/assets/img/participants/maoyafei.jpeg")},
@@ -339,6 +341,7 @@ export default {
 
         {name: 'Huijun Yuan', img: require("@/assets/img/participants/HuiJunYuan.jpg")},
         //袁慧君老师
+
         {name: 'Qiang Gao', img: require("@/assets/img/participants/QiangGao.png")},
         // {name: 'Xin Jin', img: require("@/assets/img/participants/HuiJunYuan.jpg")},
         {name: 'Xin Jin', img: require("@/assets/img/participants/jinxin.jpeg")},
