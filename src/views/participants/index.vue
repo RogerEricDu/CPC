@@ -275,6 +275,8 @@ export default {
         {name: 'Lei Li', img: require("@/assets/img/participants/lilei.jpeg")},
         {name: 'Minxian Wang', img: require("@/assets/img/participants/wangminxian.jpeg")},
         {name: 'Dezhi Tang', img: require("@/assets/img/participants/tangdezhi.jpeg")},
+        {name: 'Shunmin He', img: require("@/assets/img/participants/heshunmin.jpeg")},
+
         {name: 'Cheng Quan', img: require("@/assets/img/participants/quancheng.jpeg")},
         {name: 'Chunchun Yuan', img: require("@/assets/img/participants/yuanchunchun.jpeg")},
         {name: 'Xiaofei Yang', img: require("@/assets/img/participants/XiaofeiYang.jpg")},
@@ -308,12 +310,11 @@ export default {
         {name: 'Jinchen Li', img: require("@/assets/img/participants/lijinchen.jpeg")},
         {name: 'Shaohua Fan', img: require("@/assets/img/participants/fanshaohua.jpeg")},
         {name: 'Yingbing Shi', img: require("@/assets/img/participants/shiyingbing.jpeg")},
-        {name: 'Hao Sun', img: require("@/assets/img/participants/Hao Sun.jpeg")},
+        // {name: 'Hao Sun', img: require("@/assets/img/participants/Hao Sun.jpeg")},
         {name: 'Chuangxue Mao', img: require("@/assets/img/participants/maochuangxue.jpeg")},
         {name: 'Guanlin Wang', img: require("@/assets/img/participants/wangguanlin.jpeg")},
         {name: 'Qi Liu', img: require("@/assets/img/participants/liuqi.jpeg")},
         {name: 'Chuanchao Wang', img: require("@/assets/img/participants/wangchuanchao.jpeg")},
-
 
 
         // {name: 'Dongdong Wu', img: require("@/assets/img/participants/wudongdong.jpg")},
@@ -322,10 +323,7 @@ export default {
         //14.Hao Sun
 
 
-
         //  学生
-
-
 
 
       ],
@@ -407,6 +405,7 @@ export default {
   border-radius: 5px;
 
   transition: all 0.2s linear;
+
   &:hover {
     transform: scale(1.1, 1.1);
     filter: contrast(130%);
