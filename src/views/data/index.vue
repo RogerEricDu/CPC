@@ -65,18 +65,18 @@
          style="cursor: pointer;"
     >
       <h3>
-        CPC phase I (updated on Sep 24)
+        CPC phase I (updated March 18, 2025)
       </h3>
       <div style="margin-left: 20px;">
         <!--/*        <div style="margin-left: 5px;color: #383d48">*/-->
         <h4>
-          The haplotype-resolved de novo assemblies (EBV-derived sequences removed)
+          EBV sequence annotation
         </h4>
         <!--        </div>-->
         <li>
           <a style="color: var(--bs-link-color);text-decoration: underline;"
           >
-            EBV.contigs
+            CPC1.EBV.anno.txt
           </a>
         </li>
       </div>
@@ -201,8 +201,8 @@ export default {
   methods: {
     frontDownloadB() {
       var a = document.createElement("a");  // 创建一个<a />标签
-      a.href = "EBV.contigs";                  // 设置下载文件地址 注意：使用英文
-      a.download = "EBV.contigs";        // 设置下载文件文件名
+      a.href = "CPC1.EBV.anno.txt";                  // 设置下载文件地址 注意：使用英文
+      a.download = "CPC1.EBV.anno.txt";        // 设置下载文件文件名
       a.style.display = "none";             // 隐藏a标签
       document.body.appendChild(a);         // 将a标签追加到文档对象中
       a.click();                            // 点击，浏览器自动下载
