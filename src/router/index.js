@@ -19,6 +19,11 @@ const router = new VueRouter({
             meta: {title: 'Phase I'}
         },
         {
+            path: '/phaseii',
+            component: () => import('@/views/phaseii/index'),
+            meta: {title: 'Phase II'}
+        },
+        {
             path: '/participants',
             component: () => import('@/views/participants/index'),
             meta: {title: 'Participants'}

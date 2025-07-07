@@ -2,9 +2,26 @@
   <div>
     <div style="max-width: 1200px; padding: 0 10px 20px">
 
+      <!--会议五-->
+      <div style="font-size: 20px;font-weight: 600;padding: 10px 0 0">
+        <div style="background-color: #2b4275;border-radius: 5px;padding: 0 0 0;width: fit-content">
+          <p style="color: #ffffff;padding: 5px 10px 5px;">
+            Chinese Pangenome Phase II Progress at WYMM TOUR
+          </p>
+        </div>
+      </div>
+      <p>
+        Professor Xu and CPC members presenting the progress of the Chinese Pangenome Consortium Phase 2 at the WYMM TOUR conference.
+      </p>
+      <div style="display:flex;justify-content:space-between;margin-bottom: 40px;">
+        <img data-aos="fade-right" src="@/assets/img/conference/Conference5-1.jpg"
+             style="width:30%;border-radius: 10px; margin-right: 20px;">
+        <img data-aos="fade-right" src="@/assets/img/conference/Conference5-2.jpg"
+             style="width:70%;border-radius: 10px;">
+      </div>
 
 
-<!--会议四-->
+      <!--会议四-->
       <div style="font-size: 20px;font-weight: 600;padding: 10px 0 0">
         <div style="background-color: #2b4275;border-radius: 5px;padding: 0 0 0;width: fit-content">
           <p style="color: #ffffff;padding: 5px 10px 5px;">

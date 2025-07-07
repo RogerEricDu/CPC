@@ -15,6 +15,8 @@
           <p style="color:#606266; "> | </p>
           <router-link active-class="nav-link-active" to="/phasei">Phase I</router-link>
           <p style="color:#606266; "> | </p>
+          <router-link active-class="nav-link-active" to="/phaseii">Phase II</router-link>
+          <p style="color:#606266; "> | </p>
           <router-link active-class="nav-link-active" to="/participants">Participants</router-link>
           <p style="color:#606266; "> | </p>
           <router-link active-class="nav-link-active" to="/data">Data</router-link>
