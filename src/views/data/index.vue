@@ -101,7 +101,7 @@
 export default {
   data() {
     return {
-      fileUrl: `https://pog.fudan.edu.cn/cpc/files`,
+      fileUrl: `https://pog.fudan.edu.cn/cpc/download/`,
 
       cpc: ['CPC.Phase1.CHM13v2-full', 'CPC.Phase1.CHM13v2', 'CPC.Phase1.CHM13v2-minaf.0.1'],
       cpchprc: ['CPC.HPRC.Phase1.CHM13v2', 'CPC.HPRC.Phase1.CHM13v2-minaf.0.1', 'CPC.HPRC.Phase1.GRCh38-MAF01.cactus264', 'CPC_HPRC_reconstruct_GRCh38ref_T2Tplus_CN1plus', 'CPC_HPRC_reconstruct_GRCh38ref_T2Tplus_CN1plus.full'],
