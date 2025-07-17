@@ -55,6 +55,11 @@ const router = new VueRouter({
             path: '/about',
             component: () => import('@/views/about/index'),
             meta: {title: 'About'}
+        },
+        {
+            path: '/statistics_ip',
+            component: () => import('@/views/statistics_ip/index'),
+            meta: {title: 'STA_IP'}
         }
     ]
 })

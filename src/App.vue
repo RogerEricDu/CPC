@@ -28,6 +28,8 @@
           <router-link active-class="nav-link-active" to="/news">News</router-link>
           <p style="color:#606266; "> | </p>
           <router-link active-class="nav-link-active" to="/about">About</router-link>
+          <p style="color:#606266; "> | </p>
+          <router-link active-class="nav-link-active" to="/statistics_ip">Statistics</router-link>
         </div>
       </div>
     </nav>
