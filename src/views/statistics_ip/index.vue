@@ -1,34 +1,27 @@
 <template>
   <div>
-    <h2>
-      Statistics
-    </h2>
-    <div class="module">
-<!--      <h1 class="module-title">Platform Monitor</h1>-->
-      <div class="map-scroll-wrapper">
-          <div class="map-inner-container">
-            <a href='https://clustrmaps.com/site/1c75h'  title='Visit tracker'>
-              <img src='//clustrmaps.com/map_v2.png?cl=080808&w=300&t=tt&d=Sx8Dm69Q9ndVaydehRwldv9vPNXIb6wSeisysWB7KVc&co=ffffff&ct=808080'/>
-            </a>
+    <h2>Statistics</h2>
 
+    <div class="module">
+      <!-- 可选模块标题 -->
+      <!-- <h1 class="module-title">Platform Monitor</h1> -->
+
+      <p class="map-description">
+        This map shows the geographic distribution of visitors to this site in real time. Your visit may be reflected here!
+      </p>
+
+      <div class="map-scroll-wrapper">
+        <div class="map-inner-container">
+          <a href='https://clustrmaps.com/site/1c75i' title='Visit tracker'>
+            <img src='//clustrmaps.com/map_v2.png?cl=ffffff&w=900&t=n&d=Jep35PyKwkjIy_1isBFHO3WQowUUZG_poldVyKPA--w&co=cec6c6&ct=ffffff' />
+          </a>
         </div>
       </div>
+
+      <!-- 空白区域 -->
+      <div style="height: 40px;"></div>
     </div>
   </div>
-
-<!--      <p>China has been an important part of the global force of human-->
-<!--        genomics since the Human Genome Project, the International HapMap Project, and the 1000 Genomes Project.-->
-<!--        Despite regional efforts are crucial considering the differentiated genetic makeups of populations in-->
-<!--        different geographical places as we have shown in this first report of CPC, we believe there is great room for-->
-<!--        international collaborations to increase between China and other countries in building the pangenome reference-->
-<!--        and applying for various basic and clinical research. Similar to many other collaborative projects in human-->
-<!--        genomics, the success of CPC requires a large team of scientists with expertise in population genomics, genome-->
-<!--        sequencing technologies, computational biology, and ethics, within China as well as international-->
-<!--        collaborations. CPC also aims to improve and broaden foundational genomic data resources to be shared with-->
-<!--        both domestic and international communities.-->
-<!--      </p>-->
-
-
 </template>
 <script>
 // const script = document.createElement('script');
