@@ -39,18 +39,23 @@
           </div>
         </div>
         
-        <button 
-          @click="checkPhase2Access"
-          style="padding: 12px 30px; background: #5979c2; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s;"
-          @mouseover="e => e.target.style.background = '#4865a3'"
-          @mouseout="e => e.target.style.background = '#5979c2'"
-        >
-          Access CPC Phase II Data
-        </button>
-        
-<!--         <div style="margin-top: 25px; font-size: 14px; color: #888;">
-          For access requests, please contact: <span style="color: #5979c2;">cpc@fudan.edu.cn</span>
-        </div> -->
+<button 
+  @click="checkPhase2Access"
+  style="padding: 12px 30px; background: #5979c2; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s;"
+  @mouseover="e => e.target.style.background = '#4865a3'"
+  @mouseout="e => e.target.style.background = '#5979c2'"
+>
+  Access CPC Phase II Data
+</button>
+
+<div style="margin-top: 25px;">
+  <div style="font-size: 14px; color: #888; margin-bottom: 10px;">
+    For access requests, please contact: <span style="color: #5979c2;">Humpog@fudan.edu.cn</span>
+  </div>
+  <div style="font-size: 13px; color: #666; line-height: 1.5; text-align: left; max-width: 800px;">
+    The near T2T CPC.Ref2 comprises 948 genome haplotype-resolved assemblies derived from 474 individuals representing 60 ethnolinguistic groups across China. These assemblies achieve an average gap-free contig N50 of 103 Mb, with an average of ~109 haploid assemblies per chromosome reaching T2T completion standards and exceptional sequence quality (~QV 59.2).
+  </div>
+</div>
       </div>
     </div>
     
@@ -222,9 +227,9 @@
       * Files with "-min.af.0.1" were clipped to keep only nodes covered by >= 10% haplotypes (only suitable for short-read mapping).<br>
       * Files with neither suffix were clipped so that path intervals in the graph that span >=10kb without aligning to the minigraph are removed.
     </div> -->
-        <div style="margin-top: 50px">
+<!--         <div style="margin-top: 50px">
 The near T2T CPC.Ref2 comprises 948 genome haplotype-resolved assemblies derived from 474 individuals representing 60 ethnolinguistic groups across China. These assemblies achieve an average gap-free contig N50 of 103 Mb, with an average of ~109 haploid assemblies per chromosome reaching T2T completion standards and exceptional sequence quality (~QV 59.2).
-    </div>
+    </div> -->
     
     <!-- 现有其他部分保持不变 -->
     <h2>Code Availability</h2>
