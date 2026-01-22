@@ -23,6 +23,16 @@ const router = new VueRouter({
             component: () => import('@/views/phaseii/index'),
             meta: {title: 'Phase II'}
         },
+/*         {
+            path: '/database',
+            component: () => import('@/views/database/index'),
+            meta: {title: 'Database'}
+        }, */
+/*         {
+            path: '/JBrowse',
+            component: () => import('@/views/jbrowse/index'),
+            meta: {title: 'JBrowse'}
+        }, */
         {
             path: '/participants',
             component: () => import('@/views/participants/index'),

@@ -16,6 +16,11 @@
           <router-link active-class="nav-link-active" to="/phasei">Phase I</router-link>
           <p style="color:#606266; "> | </p>
           <router-link active-class="nav-link-active" to="/phaseii">Phase II</router-link>
+<!--           <p style="color:#606266; "> | </p>
+          <router-link active-class="nav-link-active" to="/database">Database</router-link> -->
+<!--           <p style="color:#606266; "> | </p>
+          <router-link active-class="nav-link-active" to="/jbrowse">JBrowse</router-link>
+ -->
           <p style="color:#606266; "> | </p>
           <router-link active-class="nav-link-active" to="/participants">Participants</router-link>
           <p style="color:#606266; "> | </p>
