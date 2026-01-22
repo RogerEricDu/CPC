@@ -48,9 +48,9 @@
           Access CPC Phase II Data
         </button>
         
-        <div style="margin-top: 25px; font-size: 14px; color: #888;">
+<!--         <div style="margin-top: 25px; font-size: 14px; color: #888;">
           For access requests, please contact: <span style="color: #5979c2;">cpc@fudan.edu.cn</span>
-        </div>
+        </div> -->
       </div>
     </div>
     
