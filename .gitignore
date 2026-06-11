@@ -24,3 +24,5 @@ pnpm-debug.log*
 *.fa.gz
 *.fa.gz
 *.gz
+*.fa.gz
+*.fa.gz.*
