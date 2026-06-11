@@ -1,15 +1,12 @@
 <template>
   <div style="padding: 0px 10px 20px">
     <!-- 新增的 CPC Phase II 部分 -->
-    <div style="position: relative; z-index: 1;">
-      <!-- 认证描述文字 -->
-      <div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #5979c2;">
-        <h2>The CPC Phase II Data Availability</h2>
+<!--     <div style="position: relative; z-index: 1;">      <div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #5979c2;">
+       <h2>The CPC Phase II Data Availability</h2>
         The release of the CPC Phase II data has been approved by the National Health Commission of the People's Republic of China (No. 2025BAT01059). The CPC2 assemblies, summary data and more detailed information are freely available at the CPC website (<a href=" ">https://pog.fudan.edu.cn/cpc</a >). The raw data are available at the National Genomics Data Center (<a href="https://ngdc.cncb.ac.cn/gwh">https://ngdc.cncb.ac.cn/gwh</a >) under the BioProject PRJCA046231.
       </div>
     </div>
     
-    <!-- 认证界面 -->
     <div v-if="!isPhase2Authenticated" style="background-color: #fff; padding: 40px 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #e0e0e0; text-align: center;">
       <div style="max-width: 500px; margin: 0 auto;">
         <div style="margin-bottom: 30px;">
@@ -59,10 +56,9 @@
       </div>
     </div>
     
-    <!-- 已认证显示的数据内容 -->
     <div v-else>
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <!-- 登出按钮和会话倒计时 -->
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
           <div v-if="sessionTimeLeft > 0" style="font-size: 14px; color: #666; display: flex; align-items: center; gap: 5px;">
             <span>⏳ Session expires in:</span>
@@ -90,7 +86,7 @@
           </div>
         </div>
         
-        <!-- 搜索和过滤 -->
+
         <div style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 6px; border: 1px solid #e0e0e0;">
           <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 15px;">
             <div style="flex: 1; min-width: 300px;">
@@ -122,15 +118,14 @@
           </div>
         </div>
         
-        <!-- 文件数量统计 -->
+
         <div style="margin-bottom: 20px; font-size: 14px; color: #666;">
           Showing {{ filteredSamples.length }} of {{ allSamples.length }} files
           <span v-if="searchQuery2" style="color: #5979c2; font-weight: 500;">
             (Search: "{{ searchQuery2 }}")
           </span>
         </div>
-        
-        <!-- 样本文件列表 -->
+
         <div style="max-height: 600px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 6px; background: white;">
           <table style="width: 100%; border-collapse: collapse;">
             <thead style="background: #f5f7fa;">
@@ -209,7 +204,7 @@
             </tbody>
           </table>
           
-          <!-- 空状态提示 -->
+
           <div v-if="filteredSamples.length === 0" style="text-align: center; padding: 40px; color: #999;">
             <div style="font-size: 48px; margin-bottom: 20px;">📁</div>
             <div style="font-size: 16px; margin-bottom: 10px;">No files match your search criteria</div>
@@ -217,18 +212,6 @@
           </div>
         </div>
       </div>
-    </div>
-    
-    <!-- 现有的底部说明 -->
-<!--     <div style="margin-top: 50px">
-      * CPC pangenome reference includes 122 haplotypes of 61 samples from 36 East Asian populations.<br>
-      * CPC & HPRC pangenome reference includes all samples in CPC.Phase1 and HPRC.<br>
-      * Files with "-full" contain all contigs that could be assigned a chromosome, nothing masked or clipped.<br>
-      * Files with "-min.af.0.1" were clipped to keep only nodes covered by >= 10% haplotypes (only suitable for short-read mapping).<br>
-      * Files with neither suffix were clipped so that path intervals in the graph that span >=10kb without aligning to the minigraph are removed.
-    </div> -->
-<!--         <div style="margin-top: 50px">
-The near T2T CPC.Ref2 comprises 948 genome haplotype-resolved assemblies derived from 474 individuals representing 60 ethnolinguistic groups across China. These assemblies achieve an average gap-free contig N50 of 103 Mb, with an average of ~109 haploid assemblies per chromosome reaching T2T completion standards and exceptional sequence quality (~QV 59.2).
     </div> -->
     
     <!-- 现有其他部分保持不变 -->
@@ -404,14 +387,6 @@ files: [
         {name: 'CPC_HPRC_reconstruct_GRCh38ref_T2Tplus_CN1plus.full.gbz', class: 'CPC_HPRC_reconstruct_GRCh38ref_T2Tplus_CN1plus.full'},
 
 
-
-        // {
-        //   name: 'CPC_HPRC_GRCh38ref_pluschm13cn1.MAF001.for_pangenie.vcf',
-        //   class: 'CPC.HPRC.Phase1.GRCh38-MAF001.cactus264'
-        // },
-        // {name: 'CPC_HPRC_GRCh38ref_pluschm13cn1.MAF001.dist', class: 'CPC.HPRC.Phase1.GRCh38-MAF001.cactus264'},
-
-
         {name: 'CPC.p1.58inds.GFF3.tar.gz', class: 'CPC.p1.58inds.GFF3'},
 
         {name: 'CPC.HPRC.Phase1.processed.SVs.normed.vcf.gz', class: 'CPC.HPRC.Phase1.processed.SVs.normed'},
@@ -422,7 +397,8 @@ files: [
       isPhase2Authenticated: false,
       phase2AccessKey: '',
       phase2AuthError: '',
-      validPhase2Key: 'Nature2026-01-00530@POG',
+            // 🔐 Base64编码的密钥 (对应: Nature2026-01-00530@POG)
+      validPhase2KeyEncoded: 'TmF0dXJlMjAyNi0wMS0wMDUzMEBQT0c=',
       
       // Session 管理
       sessionTimer: null,
@@ -491,7 +467,9 @@ files: [
     
     // Phase II 认证检查
     checkPhase2Access() {
-      if (this.phase2AccessKey === this.validPhase2Key) {
+         // 解码 Base64 密钥
+      const decodedKey = atob(this.validPhase2KeyEncoded)
+      if (this.phase2AccessKey === decodedKey) {  
         this.isPhase2Authenticated = true
         this.phase2AuthError = ''
         
