@@ -94,7 +94,7 @@
       </button>
       
       <button 
-        v-if="results"
+        v-if="results && results.status === 'completed'"
         @click="downloadResults"
         class="download-btn"
       >
@@ -102,20 +102,22 @@
       </button>
     </div>
 
+    <div v-if="error" class="error-message">{{ error }}</div>
+
     <div v-if="results" class="results-section">
-      <h3>Imputation Results</h3>
+      <h3>Imputation Status: {{ results.status }}</h3>
       <div class="results-stats">
         <div class="stat-item">
           <span class="stat-label">Imputed SNPs:</span>
-          <span class="stat-value">{{ results.imputedSnps.toLocaleString() }}</span>
+          <span class="stat-value">{{ results.imputedSnps ? results.imputedSnps.toLocaleString() : '-' }}</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">Average Quality Score:</span>
-          <span class="stat-value">{{ results.avgQuality }}</span>
+          <span class="stat-value">{{ results.avgQuality || '-' }}</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">Completion Rate:</span>
-          <span class="stat-value">{{ results.completionRate }}</span>
+          <span class="stat-value">{{ results.completionRate || '-' }}</span>
         </div>
       </div>
     </div>
@@ -123,6 +125,8 @@
 </template>
 
 <script>
+import { downloadImputationResult, getImputationStatus, uploadImputation } from '@/api/imputation'
+
 export default {
   name: 'ImputationTool',
   data() {
@@ -133,8 +137,14 @@ export default {
       qualityThreshold: 0.8,
       outputFormat: 'vcf',
       running: false,
-      results: null
+      results: null,
+      taskId: '',
+      pollTimer: null,
+      error: ''
     }
+  },
+  beforeDestroy() {
+    this.clearPoll()
   },
   methods: {
     triggerFileInput() {
@@ -174,23 +184,59 @@ export default {
     },
     
     async runImputation() {
+      if (!this.selectedFile) return
       this.running = true
-      
-      // 模拟运行过程
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      this.results = {
-        imputedSnps: 1250000,
-        avgQuality: '0.92',
-        completionRate: '98.5%'
+      this.results = null
+      this.error = ''
+      try {
+        const formData = new FormData()
+        formData.append('file', this.selectedFile)
+        formData.append('referencePanel', this.referencePanel)
+        formData.append('populationGroup', this.populationGroup)
+        formData.append('qualityThreshold', this.qualityThreshold)
+        formData.append('outputFormat', this.outputFormat)
+        const response = await uploadImputation(formData)
+        this.taskId = response.data.taskId
+        this.results = response.data
+        this.startPoll()
+      } catch (err) {
+        this.error = err.message || 'Failed to submit imputation task'
+        this.running = false
       }
-      
-      this.running = false
     },
     
-    downloadResults() {
-      // 模拟下载功能
-      alert('Download functionality would be implemented here')
+    startPoll() {
+      this.clearPoll()
+      this.pollTimer = setInterval(this.refreshStatus, 3000)
+      this.refreshStatus()
+    },
+
+    clearPoll() {
+      if (this.pollTimer) {
+        clearInterval(this.pollTimer)
+        this.pollTimer = null
+      }
+    },
+
+    async refreshStatus() {
+      if (!this.taskId) return
+      try {
+        const response = await getImputationStatus(this.taskId)
+        this.results = response.data
+        if (['completed', 'failed'].includes(response.data.status)) {
+          this.running = false
+          this.clearPoll()
+        }
+      } catch (err) {
+        this.error = err.message || 'Failed to refresh task status'
+        this.running = false
+        this.clearPoll()
+      }
+    },
+
+    async downloadResults() {
+      if (!this.taskId) return
+      await downloadImputationResult(this.taskId, this.results && this.results.filename)
     }
   }
 }
@@ -387,6 +433,15 @@ export default {
 
 .download-btn:hover {
   background-color: #218838;
+}
+
+.error-message {
+  margin: 15px 0;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }
 
 .results-section h3 {

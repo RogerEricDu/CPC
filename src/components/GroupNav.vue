@@ -14,19 +14,53 @@
       <!--        <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">-->
       <!--        <button type="button" class="btn btn-outline-primary">Search</button>-->
       <!--      </form>-->
-
+      <div class="auth-links">
+        <template v-if="currentUser">
+          <button v-if="isAdminUser" type="button" @click="$router.push('/admin')">Admin</button>
+          <span>{{ currentUser.username }} · {{ currentUser.accessLevel }}</span>
+          <button type="button" @click="logout">Logout</button>
+        </template>
+        <button v-else type="button" @click="$router.push('/login')">Login</button>
+      </div>
     </div>
   </nav>
 </template>
 
 <script>
+import { clearAuth, getCurrentUser, isAdmin } from '@/utils/auth'
+
 export default {
   name: 'GroupNav',
+  data() {
+    return {
+      currentUser: getCurrentUser()
+    }
+  },
+  computed: {
+    isAdminUser() {
+      return isAdmin(this.currentUser)
+    }
+  },
+  mounted() {
+    window.addEventListener('cpc-auth-changed', this.refreshUser)
+  },
+  beforeDestroy() {
+    window.removeEventListener('cpc-auth-changed', this.refreshUser)
+  },
   methods: {
     docs() {
       // console.log("转到课题组网站");
       window.location.href = 'https://pog.fudan.edu.cn';
     },
+    refreshUser() {
+      this.currentUser = getCurrentUser()
+    },
+    logout() {
+      clearAuth()
+      if (this.$route.path === '/admin') {
+        this.$router.push('/home')
+      }
+    }
   },
 
 }
@@ -40,5 +74,23 @@ export default {
 
 .my-bg-dark {
   background-color: rgb(8, 22, 49) !important;
+}
+
+.auth-links {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 0.92rem;
+}
+
+.auth-links button {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 5px;
+  padding: 5px 11px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
 }
 </style>

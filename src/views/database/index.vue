@@ -39,7 +39,7 @@
       <button 
         class="nav-btn" 
         :class="{ active: activeTab === 'snp' }"
-        @click="activeTab = 'snp'"
+        @click="selectTab('snp')"
       >
         <i class="nav-icon">🧬</i>
         SNP Query
@@ -47,7 +47,7 @@
       <button 
         class="nav-btn" 
         :class="{ active: activeTab === 'sv' }"
-        @click="activeTab = 'sv'"
+        @click="selectTab('sv')"
       >
         <i class="nav-icon">🧬</i>
         SV Query
@@ -55,7 +55,7 @@
       <button 
         class="nav-btn" 
         :class="{ active: activeTab === 'imputation' }"
-        @click="activeTab = 'imputation'"
+        @click="selectTab('imputation')"
       >
         <i class="nav-icon">🔀</i>
         Imputation
@@ -63,7 +63,7 @@
       <button 
         class="nav-btn" 
         :class="{ active: activeTab === 'pangraph' }"
-        @click="activeTab = 'pangraph'"
+        @click="selectTab('pangraph')"
       >
         <i class="nav-icon">🔀</i>
         PanGraph
@@ -72,9 +72,18 @@
 
     <!-- 内容区域 -->
     <div class="database-content">
-      <SNPQuery v-if="activeTab === 'snp'" />
-      <SVQuery v-if="activeTab === 'sv'" />
-      <ImputationTool v-if="activeTab === 'imputation'" />
+      <div v-if="!canUseDatabase" class="login-required">
+        <div class="lock-icon">🔒</div>
+        <h3>需要登录才能使用</h3>
+        <p>Database tools are available after login with BASIC access.</p>
+        <button @click="$router.push('/login?redirect=/database')">Login</button>
+      </div>
+      <template v-else>
+        <SNPQuery v-if="activeTab === 'snp'" />
+        <SVQuery v-if="activeTab === 'sv'" />
+        <ImputationTool v-if="activeTab === 'imputation'" />
+        <Pangraph v-if="activeTab === 'pangraph'" />
+      </template>
     </div>
   </div>
 </template>
@@ -84,6 +93,7 @@ import SNPQuery from './SNPQuery.vue'
 import SVQuery from './SVQuery.vue'
 import ImputationTool from './ImputationTool.vue'
 import Pangraph from './Pangraph.vue';
+import { getCurrentUser, hasBasicAccess } from '@/utils/auth'
 
 export default {
   name: 'Database',
@@ -95,7 +105,30 @@ export default {
   },
   data() {
     return {
-      activeTab: 'snp'
+      activeTab: 'snp',
+      currentUser: getCurrentUser()
+    }
+  },
+  computed: {
+    canUseDatabase() {
+      return hasBasicAccess(this.currentUser)
+    }
+  },
+  mounted() {
+    window.addEventListener('cpc-auth-changed', this.refreshUser)
+  },
+  beforeDestroy() {
+    window.removeEventListener('cpc-auth-changed', this.refreshUser)
+  },
+  methods: {
+    refreshUser() {
+      this.currentUser = getCurrentUser()
+    },
+    selectTab(tab) {
+      this.activeTab = tab
+      if (!this.canUseDatabase) {
+        return
+      }
     }
   }
 }
@@ -331,6 +364,39 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
+}
+
+.login-required {
+  margin: 20px auto 40px;
+  padding: 44px 20px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  background: #f8f9fa;
+  text-align: center;
+}
+
+.login-required .lock-icon {
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+}
+
+.login-required h3 {
+  color: #2b4275;
+  margin-bottom: 8px;
+}
+
+.login-required p {
+  color: #606266;
+}
+
+.login-required button {
+  margin-top: 10px;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 24px;
+  color: #fff;
+  background: #5979c2;
+  cursor: pointer;
 }
 
 /* 响应式设计 */

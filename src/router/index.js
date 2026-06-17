@@ -1,4 +1,5 @@
 import VueRouter from 'vue-router'
+import { isAdmin, isLoggedIn } from '@/utils/auth'
 
 const router = new VueRouter({
     // mode: 'history', // 路由history模式，地址栏不会出现丑丑的 #
@@ -70,8 +71,26 @@ const router = new VueRouter({
             path: '/statistics_ip',
             component: () => import('@/views/statistics_ip/index'),
             meta: {title: 'STA_IP'}
+        },
+        {
+            path: '/login',
+            component: () => import('@/views/login/index'),
+            meta: {title: 'Login'}
+        },
+        {
+            path: '/admin',
+            component: () => import('@/views/admin/index'),
+            meta: {title: 'Admin', requiresAdmin: true}
         }
     ]
+})
+router.beforeEach((to, from, next) => {
+    if (to.meta && to.meta.requiresAdmin && !isAdmin()) {
+        const redirect = isLoggedIn() ? '/home' : `/login?redirect=${encodeURIComponent(to.fullPath)}`
+        next(redirect)
+        return
+    }
+    next()
 })
 // 全局后置路由守卫 用于更改页签标题
 router.afterEach((to) => {
