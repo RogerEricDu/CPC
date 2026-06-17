@@ -53,6 +53,23 @@ export default {
   max-height: 380px;
   overflow: hidden;
   padding-bottom: 70px;
+  filter: blur(0);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 38%,
+    rgba(0, 0, 0, 0.78) 55%,
+    rgba(0, 0, 0, 0.34) 76%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 38%,
+    rgba(0, 0, 0, 0.78) 55%,
+    rgba(0, 0, 0, 0.34) 76%,
+    transparent 100%
+  );
 }
 
 .locked-preview::after {
@@ -66,24 +83,32 @@ export default {
   background: linear-gradient(
     to bottom,
     rgba(255, 255, 255, 0),
-    rgba(255, 255, 255, 0.76) 36%,
-    rgba(255, 255, 255, 0.95)
+    rgba(255, 255, 255, 0.24) 28%,
+    rgba(255, 255, 255, 0.58) 62%,
+    rgba(255, 255, 255, 0.94)
   );
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 
 .locked-overlay {
   position: absolute;
   left: 0;
   right: 0;
-  top: 128px;
+  top: 170px;
   bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.72));
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.34) 32%,
+    rgba(255, 255, 255, 0.72) 100%
+  );
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 .lock-panel {
