@@ -33,6 +33,6 @@ module.exports = defineConfig({
     }
   },
   
-  publicPath: '/cpc/',
+  publicPath: process.env.VUE_APP_PUBLIC_PATH || '/cpc/',
   lintOnSave: false
 })
