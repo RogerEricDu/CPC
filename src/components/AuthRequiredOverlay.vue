@@ -9,9 +9,7 @@
       </div>
       <div class="locked-overlay">
         <div class="lock-panel">
-          <div class="lock-icon" aria-hidden="true">
-            <span class="lock-glyph"></span>
-          </div>
+          <div class="lock-icon" aria-hidden="true">🔒</div>
           <div class="lock-text">{{ lockedText }}</div>
           <button type="button" @click="$emit('action')">{{ actionText }}</button>
         </div>
@@ -30,11 +28,11 @@ export default {
     },
     lockedText: {
       type: String,
-      default: '需要登录访问'
+      default: 'Please log in to access this content.'
     },
     actionText: {
       type: String,
-      default: '登录'
+      default: 'Login'
     }
   }
 }
@@ -52,21 +50,40 @@ export default {
 }
 
 .locked-preview {
-  max-height: 260px;
+  max-height: 380px;
   overflow: hidden;
-  padding-bottom: 20px;
+  padding-bottom: 70px;
+}
+
+.locked-preview::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 190px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.76) 36%,
+    rgba(255, 255, 255, 0.95)
+  );
 }
 
 .locked-overlay {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 128px;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.72));
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
 }
 
 .lock-panel {
@@ -80,29 +97,8 @@ export default {
 }
 
 .lock-icon {
-  display: flex;
-  justify-content: center;
+  font-size: 2.2rem;
   margin-bottom: 8px;
-}
-
-.lock-glyph {
-  position: relative;
-  width: 28px;
-  height: 24px;
-  border-radius: 5px;
-  background: #5979c2;
-}
-
-.lock-glyph::before {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: -14px;
-  width: 16px;
-  height: 18px;
-  border: 4px solid #5979c2;
-  border-bottom: none;
-  border-radius: 12px 12px 0 0;
 }
 
 .lock-text {

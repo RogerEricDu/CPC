@@ -74,8 +74,7 @@
     <div class="database-content">
       <div v-if="!canUseDatabase" class="login-required">
         <div class="lock-icon">🔒</div>
-        <h3>需要登录才能使用</h3>
-        <p>Database tools are available after login with BASIC access.</p>
+        <h3>Please log in to use the database tools.</h3>
         <button @click="$router.push('/login?redirect=/database')">Login</button>
       </div>
       <template v-else>

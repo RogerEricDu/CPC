@@ -96,7 +96,7 @@ export default {
             captchaId: this.captchaId,
             captchaCode: this.captchaCode
           })
-          this.notice = 'Registration successful. You can now login with BASIC access.'
+          this.notice = 'Registration successful. You can now log in.'
           this.registerMode = false
           this.password = ''
           this.resetCaptcha()
@@ -154,8 +154,15 @@ export default {
 
 h2 {
   margin: 0 0 24px;
+  height: auto;
+  line-height: 1.3;
+  background: transparent;
   color: #2b4275;
   text-align: center;
+}
+
+h2::before {
+  display: none;
 }
 
 form {
