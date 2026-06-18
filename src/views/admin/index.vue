@@ -2,10 +2,10 @@
   <div class="admin-page">
     <div class="admin-header">
       <div>
-        <h2>Admin</h2>
+        <h1>Admin</h1>
         <p>Manage CPC user access levels, Phase II approvals, and account status.</p>
       </div>
-      <button @click="loadUsers">Refresh</button>
+      <button class="btn btn-primary" type="button" @click="loadUsers">Refresh</button>
     </div>
 
     <form class="filters" @submit.prevent="searchUsers">
@@ -27,7 +27,7 @@
         <option value="true">Enabled</option>
         <option value="false">Disabled</option>
       </select>
-      <button type="submit">Search</button>
+      <button class="btn btn-primary" type="submit">Search</button>
     </form>
 
     <div v-if="error" class="error">{{ error }}</div>
@@ -40,12 +40,12 @@
             <th>Email</th>
             <th>PI email</th>
             <th>Institution</th>
-            <th>Reason</th>
+            <th class="reason-col">Reason</th>
             <th>Access</th>
             <th>Phase II</th>
             <th>Enabled</th>
             <th>Created</th>
-            <th>Actions</th>
+            <th class="actions-col">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -74,13 +74,54 @@
             <td>{{ user.enabled ? 'Yes' : 'No' }}</td>
             <td>{{ formatDate(user.createdAt) }}</td>
             <td class="actions-cell">
-              <button v-if="user.accessLevel !== 'BASIC'" @click="setLevel(user, 'BASIC')">Set BASIC</button>
-              <button v-if="user.accessLevel !== 'PHASE2'" @click="setLevel(user, 'PHASE2')">Set PHASE2</button>
-              <button v-if="user.phase2Status !== 'APPROVED'" @click="approve(user)">Approve</button>
-              <button v-if="user.phase2Status !== 'REJECTED' && user.role !== 'ADMIN'" @click="reject(user)">Reject</button>
-              <button v-if="!user.enabled" @click="enable(user)">Enable</button>
-              <button v-if="user.enabled && user.role !== 'ADMIN'" class="danger" @click="disable(user)">Disable</button>
-              <button v-if="user.email" class="email-action" @click="openEmail(user)">Email</button>
+              <button
+                v-if="user.accessLevel === 'PHASE2' && user.role !== 'ADMIN'"
+                class="btn btn-mini btn-quiet"
+                type="button"
+                title="Revoke Phase II access while keeping the account active"
+                @click="setLevel(user, 'BASIC')"
+              >Set BASIC</button>
+              <button
+                v-if="user.accessLevel !== 'PHASE2' && user.phase2Status !== 'PENDING'"
+                class="btn btn-mini btn-primary"
+                type="button"
+                title="Grant Phase II access directly"
+                @click="setLevel(user, 'PHASE2')"
+              >Grant P2</button>
+              <button
+                v-if="user.phase2Status === 'PENDING'"
+                class="btn btn-mini btn-success"
+                type="button"
+                title="Approve this Phase II access request"
+                @click="approve(user)"
+              >Approve P2</button>
+              <button
+                v-if="user.phase2Status === 'PENDING' && user.role !== 'ADMIN'"
+                class="btn btn-mini btn-warning"
+                type="button"
+                title="Reject only the Phase II request; the BASIC account remains active"
+                @click="reject(user)"
+              >Reject P2</button>
+              <button
+                v-if="!user.enabled"
+                class="btn btn-mini btn-success"
+                type="button"
+                title="Enable this account"
+                @click="enable(user)"
+              >Enable account</button>
+              <button
+                v-if="user.enabled && user.role !== 'ADMIN'"
+                class="btn btn-mini btn-danger"
+                type="button"
+                title="Disable the entire account and block login"
+                @click="disable(user)"
+              >Disable account</button>
+              <button
+                v-if="user.email"
+                class="btn btn-mini btn-email"
+                type="button"
+                @click="openEmail(user)"
+              >Email</button>
             </td>
           </tr>
           <tr v-if="users.length === 0">
@@ -91,9 +132,9 @@
     </div>
 
     <div class="pager">
-      <button :disabled="page <= 1" @click="goPage(page - 1)">Previous</button>
+      <button class="btn btn-quiet" :disabled="page <= 1" @click="goPage(page - 1)">Previous</button>
       <span>Page {{ page }} · Total {{ total }}</span>
-      <button :disabled="page >= pageCount" @click="goPage(page + 1)">Next</button>
+      <button class="btn btn-quiet" :disabled="page >= pageCount" @click="goPage(page + 1)">Next</button>
     </div>
 
     <div v-if="emailDialog.open" class="dialog-backdrop" @click.self="closeEmail">
@@ -128,8 +169,8 @@
 
         <p v-if="emailDialog.error" class="dialog-error">{{ emailDialog.error }}</p>
         <div class="dialog-actions">
-          <button type="button" class="secondary-button" :disabled="emailDialog.sending" @click="closeEmail">Cancel</button>
-          <button type="button" :disabled="emailDialog.sending" @click="sendEmail">
+          <button type="button" class="btn btn-quiet" :disabled="emailDialog.sending" @click="closeEmail">Cancel</button>
+          <button type="button" class="btn btn-primary" :disabled="emailDialog.sending" @click="sendEmail">
             {{ emailDialog.sending ? 'Sending...' : 'Send email' }}
           </button>
         </div>
@@ -310,16 +351,17 @@ export default {
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
-  padding: 20px;
-  margin-bottom: 16px;
-  background: #fff;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  padding: 0 2px 16px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #e4e7ed;
 }
 
-h2 {
-  margin: 0 0 6px;
-  color: #2b4275;
+.admin-header h1 {
+  margin: 0 0 5px;
+  color: #1f2937;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.15;
 }
 
 p {
@@ -338,33 +380,70 @@ p {
 }
 
 input,
-select,
-button {
+select {
   min-height: 38px;
   border-radius: 5px;
   border: 1px solid #dcdfe6;
   padding: 0 10px;
 }
 
-button {
-  border: none;
-  background: #5979c2;
-  color: white;
+.btn {
+  min-height: 38px;
+  padding: 7px 13px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 700;
+  line-height: 1.15;
+  transition: filter 0.16s ease, background-color 0.16s ease, color 0.16s ease;
 }
 
-button:disabled {
-  background: #c0c4cc;
+.btn:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.btn:disabled {
+  border-color: #d7dce5;
+  background: #e7eaf0;
+  color: #9ca3af;
   cursor: not-allowed;
 }
 
-.danger {
-  background: #b42318;
+.btn-primary {
+  background: #315aa8;
+  color: #fff;
 }
 
-.email-action {
+.btn-success {
+  background: #177245;
+  color: #fff;
+}
+
+.btn-warning {
+  background: #c46812;
+  color: #fff;
+}
+
+.btn-danger {
+  background: #a72b24;
+  color: #fff;
+}
+
+.btn-email {
   background: #176b87;
+  color: #fff;
+}
+
+.btn-quiet {
+  border-color: #9aa8bc;
+  background: #fff;
+  color: #334155;
+}
+
+.btn-mini {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 0.8rem;
 }
 
 .table-wrap {
@@ -376,8 +455,9 @@ button:disabled {
 
 table {
   width: 100%;
-  min-width: 1320px;
+  min-width: 1785px;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 th,
@@ -391,6 +471,43 @@ td {
 th {
   background: #f5f7fa;
   color: #2b4275;
+}
+
+th:nth-child(1),
+td:nth-child(1) {
+  width: 150px;
+}
+
+th:nth-child(2),
+td:nth-child(2),
+th:nth-child(3),
+td:nth-child(3) {
+  width: 200px;
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+  width: 160px;
+}
+
+th:nth-child(6),
+td:nth-child(6) {
+  width: 95px;
+}
+
+th:nth-child(7),
+td:nth-child(7) {
+  width: 120px;
+}
+
+th:nth-child(8),
+td:nth-child(8) {
+  width: 90px;
+}
+
+th:nth-child(9),
+td:nth-child(9) {
+  width: 170px;
 }
 
 td small {
@@ -407,8 +524,16 @@ td small.unverified {
   font-weight: 600;
 }
 
+.reason-col,
 .reason {
-  max-width: 220px;
+  width: 300px;
+}
+
+.reason {
+  color: #566274;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .pill {
@@ -439,12 +564,16 @@ td small.unverified {
 .actions-cell {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 7px;
+  width: 300px;
+}
+
+.actions-col {
+  width: 300px;
 }
 
 .actions-cell button {
-  min-height: 30px;
-  font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 .empty,
@@ -512,6 +641,13 @@ td small.unverified {
   background: #eef2f7;
   color: #303133;
   font-size: 24px;
+}
+
+.close-button,
+.secondary-button {
+  border: 1px solid #cbd3df;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .email-dialog label {

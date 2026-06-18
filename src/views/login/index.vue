@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-box">
       <h2>{{ registerMode ? 'Register CPC Account' : 'Login to CPC' }}</h2>
-      <form @submit.prevent="handleSubmit">
+      <form :key="registerMode ? 'register' : 'login'" @submit.prevent="handleSubmit">
         <label>
           Username
           <input v-model.trim="username" required minlength="3" maxlength="50" autocomplete="username">
@@ -18,7 +18,7 @@
           <input
             v-model.trim="piEmail"
             type="email"
-            autocomplete="email"
+            autocomplete="off"
             placeholder="Required for students seeking PI confirmation"
           >
           <small>
@@ -38,7 +38,14 @@
 
         <label>
           Password
-          <input v-model="password" type="password" required minlength="8" maxlength="128" autocomplete="current-password">
+          <input
+            v-model="password"
+            type="password"
+            required
+            minlength="8"
+            maxlength="128"
+            :autocomplete="registerMode ? 'new-password' : 'current-password'"
+          >
         </label>
 
         <label>
@@ -80,7 +87,6 @@ export default {
   components: { ImageCaptcha },
   data() {
     return {
-      registerMode: false,
       username: '',
       email: '',
       piEmail: '',
@@ -93,6 +99,19 @@ export default {
       loading: false,
       error: '',
       notice: ''
+    }
+  },
+  computed: {
+    registerMode() {
+      return this.$route.path === '/register'
+    }
+  },
+  watch: {
+    registerMode() {
+      this.password = ''
+      this.error = ''
+      this.notice = ''
+      this.resetCaptcha()
     }
   },
   methods: {
@@ -115,10 +134,15 @@ export default {
             captchaId: this.captchaId,
             captchaCode: this.captchaCode
           })
-          this.notice = 'Registration submitted. Verify your email and, if provided, ask your PI to complete their confirmation. An administrator will review the account afterward.'
-          this.registerMode = false
+          const registrationNotice = 'Registration submitted. Verify your email and, if provided, ask your PI to complete their confirmation. An administrator will review the account afterward.'
           this.password = ''
           this.resetCaptcha()
+          const redirect = this.$route.query.redirect
+          await this.$router.replace({
+            path: '/login',
+            query: redirect ? { redirect } : {}
+          })
+          this.notice = registrationNotice
           return
         }
         const response = await login({
@@ -138,10 +162,14 @@ export default {
       }
     },
     toggleMode() {
-      this.registerMode = !this.registerMode
+      const target = this.registerMode ? '/login' : '/register'
+      const redirect = this.$route.query.redirect
+      this.$router.push({
+        path: target,
+        query: redirect ? { redirect } : {}
+      })
       this.error = ''
       this.notice = ''
-      this.resetCaptcha()
     },
     resetCaptcha() {
       this.captchaId = ''
@@ -234,16 +262,33 @@ button {
   padding: 11px 16px;
   cursor: pointer;
   font-weight: 700;
+  transition: background-color 0.16s ease, color 0.16s ease, opacity 0.16s ease;
 }
 
 .primary {
-  background: #5979c2;
+  background: #315aa8;
   color: white;
 }
 
+.primary:hover:not(:disabled) {
+  background: #244985;
+}
+
 .secondary {
-  background: #eef2f7;
-  color: #2b4275;
+  border: 1px solid #9db0d4;
+  background: #fff;
+  color: #315aa8;
+}
+
+.secondary:hover:not(:disabled) {
+  background: #e8eef9;
+}
+
+button:disabled {
+  border-color: #d7dce5;
+  background: #e7eaf0;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
 .notice {

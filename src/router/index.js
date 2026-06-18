@@ -78,6 +78,11 @@ const router = new VueRouter({
             meta: {title: 'Login'}
         },
         {
+            path: '/register',
+            component: () => import('@/views/login/index'),
+            meta: {title: 'Register'}
+        },
+        {
             path: '/verify-email',
             component: () => import('@/views/login/verify-email'),
             meta: {title: 'Email verification'}

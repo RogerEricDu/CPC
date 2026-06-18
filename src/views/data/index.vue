@@ -174,13 +174,26 @@
         </p>
 
         <div class="phase2-tools">
-          <input v-model.trim="phase2Search" placeholder="Search samples, e.g. CPCERZ200001">
-          <label><input type="checkbox" v-model="showHaplotype1"> .1 files</label>
-          <label><input type="checkbox" v-model="showHaplotype2"> .2 files</label>
+          <label class="phase2-search">
+            <span>Search assemblies</span>
+            <input v-model.trim="phase2Search" placeholder="e.g. CPCERZ200001">
+          </label>
+          <fieldset class="haplotype-filter">
+            <legend>Haplotype files</legend>
+            <label :class="{ active: showHaplotype1 }">
+              <input type="checkbox" v-model="showHaplotype1">
+              <span>Haplotype .1</span>
+            </label>
+            <label :class="{ active: showHaplotype2 }">
+              <input type="checkbox" v-model="showHaplotype2">
+              <span>Haplotype .2</span>
+            </label>
+          </fieldset>
         </div>
 
         <p class="muted">
-          Showing {{ filteredPhase2Rows.length }} of {{ phase2Rows.length }} assemblies
+          <span v-if="loadingFiles">Loading download files...</span>
+          <span v-else>Showing {{ filteredPhase2Rows.length }} of {{ phase2Rows.length }} assemblies</span>
           <span v-if="phase2Search">(Search: "{{ phase2Search }}")</span>
         </p>
         <div class="table-wrap">
@@ -215,42 +228,10 @@
 
 <script>
 import AuthRequiredOverlay from '@/components/AuthRequiredOverlay.vue'
+import DownloadCell from '@/components/DownloadCell.vue'
 import { applyPhase2 } from '@/api/auth'
 import { downloadDataFile, getDataFiles } from '@/api/dataAccess'
 import { getCurrentUser, hasBasicAccess, hasPhase2Access, isLoggedIn as authIsLoggedIn, setCurrentUser } from '@/utils/auth'
-
-const DownloadCell = {
-  name: 'DownloadCell',
-  props: {
-    file: {
-      type: Object,
-      default: null
-    },
-    downloadingKey: {
-      type: String,
-      default: ''
-    }
-  },
-  methods: {
-    isDownloading(file) {
-      return file && this.downloadingKey === file.key
-    }
-  },
-  template: `
-    <span>
-      <button
-        v-if="file"
-        class="download-link"
-        type="button"
-        :disabled="isDownloading(file)"
-        @click="$emit('download', file)"
-      >
-        {{ isDownloading(file) ? 'Downloading...' : file.name }}
-      </button>
-      <span v-else class="missing-file">Not available</span>
-    </span>
-  `
-}
 
 export default {
   name: 'DataPage',
@@ -298,6 +279,7 @@ export default {
       this.phase2Files.forEach(file => {
         const sampleName = file.sampleName || file.groupName
         const haplotypeMatch = file.name.match(/\.(1|2)\.fa\.gz/)
+        if (!sampleName || !haplotypeMatch) return
         const haplotype = haplotypeMatch ? haplotypeMatch[1] : ''
         const id = `${sampleName}.${haplotype}`
         if (!rows.has(id)) {
@@ -310,7 +292,7 @@ export default {
         }
         rows.get(id)[file.fileType] = file
       })
-      return Array.from(rows.values())
+      return Array.from(rows.values()).sort((left, right) => left.id.localeCompare(right.id))
     },
     filteredPhase2Rows() {
       const query = this.phase2Search.toLowerCase()
@@ -490,19 +472,81 @@ export default {
 }
 
 .phase2-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  gap: 18px;
+  align-items: end;
   margin: 18px 0;
+  padding: 16px;
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  background: #f8fafc;
 }
 
-.phase2-tools input {
-  min-width: 280px;
+.phase2-search {
+  display: grid;
+  gap: 7px;
+  color: #485568;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.phase2-search input {
+  width: 100%;
   min-height: 38px;
   border: 1px solid #dcdfe6;
   border-radius: 5px;
   padding: 0 10px;
+  background: #fff;
+  font: inherit;
+  font-weight: 400;
+}
+
+.haplotype-filter {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.haplotype-filter legend {
+  width: auto;
+  margin: 0 10px 0 0;
+  color: #485568;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 38px;
+}
+
+.haplotype-filter label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid #cfd7e5;
+  border-radius: 6px;
+  background: #fff;
+  color: #566274;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 650;
+  transition: 0.16s ease;
+}
+
+.haplotype-filter label.active {
+  border-color: #5979c2;
+  background: #5979c2;
+  color: #fff;
+}
+
+.haplotype-filter input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .muted {
@@ -538,6 +582,16 @@ th {
   font-weight: 600;
 }
 
+th:first-child,
+td:first-child {
+  width: 150px;
+}
+
+th:not(:first-child),
+td:not(:first-child) {
+  width: 225px;
+}
+
 .sample-cell {
   color: #4343d0;
   font-weight: 600;
@@ -556,6 +610,21 @@ th {
 @media (max-width: 1200px) {
   table {
     min-width: 980px;
+  }
+}
+
+@media (max-width: 760px) {
+  .phase2-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .haplotype-filter {
+    flex-wrap: wrap;
+  }
+
+  .haplotype-filter legend {
+    width: 100%;
+    line-height: 1.3;
   }
 }
 </style>
