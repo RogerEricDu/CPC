@@ -23,6 +23,14 @@ export function register(data) {
   })
 }
 
+export function verifyEmail(token) {
+  return request({
+    url: '/auth/email/verify',
+    method: 'get',
+    params: { token }
+  })
+}
+
 export function getMe() {
   return request({
     url: '/auth/me',

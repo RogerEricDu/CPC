@@ -10,7 +10,20 @@
 
         <label v-if="registerMode">
           Email
-          <input v-model.trim="email" type="email" autocomplete="email">
+          <input v-model.trim="email" type="email" required autocomplete="email" placeholder="Your institutional email">
+        </label>
+
+        <label v-if="registerMode">
+          PI email <span class="optional">(optional)</span>
+          <input
+            v-model.trim="piEmail"
+            type="email"
+            autocomplete="email"
+            placeholder="Required for students seeking PI confirmation"
+          >
+          <small>
+            If you are a student, enter your principal investigator's email. A separate confirmation request will be sent to your PI.
+          </small>
         </label>
 
         <label v-if="registerMode">
@@ -66,6 +79,7 @@ export default {
       registerMode: false,
       username: '',
       email: '',
+      piEmail: '',
       institution: '',
       applicationReason: '',
       password: '',
@@ -90,13 +104,14 @@ export default {
           await register({
             username: this.username,
             email: this.email || null,
+            piEmail: this.piEmail || null,
             institution: this.institution || null,
             applicationReason: this.applicationReason || null,
             password: this.password,
             captchaId: this.captchaId,
             captchaCode: this.captchaCode
           })
-          this.notice = 'Registration successful. You can now log in.'
+          this.notice = 'Registration submitted. Verify your email and, if provided, ask your PI to complete their confirmation. An administrator will review the account afterward.'
           this.registerMode = false
           this.password = ''
           this.resetCaptcha()
@@ -175,6 +190,18 @@ label {
   gap: 7px;
   color: #606266;
   font-weight: 600;
+}
+
+label small {
+  color: #7a8494;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.optional {
+  color: #7a8494;
+  font-size: 0.85rem;
+  font-weight: 400;
 }
 
 input,

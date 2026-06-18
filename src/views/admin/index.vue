@@ -9,7 +9,7 @@
     </div>
 
     <form class="filters" @submit.prevent="searchUsers">
-      <input v-model.trim="filters.search" placeholder="Search username, email, institution">
+      <input v-model.trim="filters.search" placeholder="Search username, applicant email, PI email, institution">
       <select v-model="filters.accessLevel">
         <option value="">All access levels</option>
         <option value="BASIC">BASIC</option>
@@ -38,6 +38,7 @@
           <tr>
             <th>User</th>
             <th>Email</th>
+            <th>PI email</th>
             <th>Institution</th>
             <th>Reason</th>
             <th>Access</th>
@@ -53,7 +54,19 @@
               <strong>{{ user.displayName || user.username }}</strong>
               <small>{{ user.username }} · {{ user.role }}</small>
             </td>
-            <td>{{ user.email || '-' }}</td>
+            <td>
+              <span>{{ user.email || '-' }}</span>
+              <small :class="verificationClass(user.emailVerified)">
+                {{ user.emailVerified ? 'Verified' : 'Not verified' }}
+              </small>
+            </td>
+            <td>
+              <span>{{ user.piEmail || '-' }}</span>
+              <small v-if="user.piEmail" :class="verificationClass(user.piEmailVerified)">
+                {{ user.piEmailVerified ? 'Verified' : 'Not verified' }}
+              </small>
+              <small v-else>Not provided</small>
+            </td>
             <td>{{ user.institution || '-' }}</td>
             <td class="reason">{{ user.applicationReason || '-' }}</td>
             <td><span class="pill">{{ user.accessLevel }}</span></td>
@@ -70,7 +83,7 @@
             </td>
           </tr>
           <tr v-if="users.length === 0">
-            <td colspan="9" class="empty">No users found</td>
+            <td colspan="10" class="empty">No users found</td>
           </tr>
         </tbody>
       </table>
@@ -174,6 +187,9 @@ export default {
         rejected: status === 'REJECTED'
       }
     },
+    verificationClass(verified) {
+      return verified ? 'verified' : 'unverified'
+    },
     formatDate(value) {
       return value ? new Date(value).toLocaleString() : '-'
     }
@@ -253,7 +269,7 @@ button:disabled {
 
 table {
   width: 100%;
-  min-width: 1100px;
+  min-width: 1320px;
   border-collapse: collapse;
 }
 
@@ -273,6 +289,15 @@ th {
 td small {
   display: block;
   color: #909399;
+}
+
+td small.verified {
+  color: #1b7f46;
+}
+
+td small.unverified {
+  color: #b42318;
+  font-weight: 600;
 }
 
 .reason {
