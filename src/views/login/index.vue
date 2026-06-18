@@ -59,6 +59,10 @@
           </button>
         </div>
 
+        <router-link v-if="!registerMode" class="forgot-link" to="/forgot-password">
+          Forgot password?
+        </router-link>
+
         <p v-if="notice" class="notice">{{ notice }}</p>
         <p v-if="error" class="error">{{ error }}</p>
       </form>
@@ -250,5 +254,10 @@ button {
 .error {
   color: #b42318;
   text-align: center;
+}
+
+.forgot-link {
+  justify-self: center;
+  color: #2b5cab;
 }
 </style>

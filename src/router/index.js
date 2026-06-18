@@ -83,6 +83,21 @@ const router = new VueRouter({
             meta: {title: 'Email verification'}
         },
         {
+            path: '/forgot-password',
+            component: () => import('@/views/login/forgot-password'),
+            meta: {title: 'Forgot password'}
+        },
+        {
+            path: '/reset-password',
+            component: () => import('@/views/login/reset-password'),
+            meta: {title: 'Reset password'}
+        },
+        {
+            path: '/account',
+            component: () => import('@/views/account/index'),
+            meta: {title: 'Account', requiresLogin: true}
+        },
+        {
             path: '/admin',
             component: () => import('@/views/admin/index'),
             meta: {title: 'Admin', requiresAdmin: true}
@@ -90,6 +105,10 @@ const router = new VueRouter({
     ]
 })
 router.beforeEach((to, from, next) => {
+    if (to.meta && to.meta.requiresLogin && !isLoggedIn()) {
+        next(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
+        return
+    }
     if (to.meta && to.meta.requiresAdmin && !isAdmin()) {
         const redirect = isLoggedIn() ? '/home' : `/login?redirect=${encodeURIComponent(to.fullPath)}`
         next(redirect)

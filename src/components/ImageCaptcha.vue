@@ -83,14 +83,16 @@ export default {
 
 .captcha-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 190px) auto;
   gap: 8px;
   align-items: center;
 }
 
 .captcha-image {
-  width: 100%;
-  height: 58px;
+  width: 190px;
+  max-width: 100%;
+  aspect-ratio: 190 / 64;
+  height: auto;
   padding: 0;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
@@ -103,7 +105,7 @@ export default {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .captcha-refresh {
@@ -129,5 +131,15 @@ export default {
 .captcha-error {
   color: #b91c1c;
   font-weight: 700;
+}
+
+@media (max-width: 420px) {
+  .captcha-row {
+    grid-template-columns: 1fr;
+  }
+
+  .captcha-refresh {
+    width: 100%;
+  }
 }
 </style>

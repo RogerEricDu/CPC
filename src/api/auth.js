@@ -31,6 +31,30 @@ export function verifyEmail(token) {
   })
 }
 
+export function forgotPassword(data) {
+  return request({
+    url: '/auth/password/forgot',
+    method: 'post',
+    data
+  })
+}
+
+export function resetPassword(data) {
+  return request({
+    url: '/auth/password/reset',
+    method: 'post',
+    data
+  })
+}
+
+export function changePassword(data) {
+  return request({
+    url: '/auth/password/change',
+    method: 'post',
+    data
+  })
+}
+
 export function getMe() {
   return request({
     url: '/auth/me',

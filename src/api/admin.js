@@ -43,3 +43,11 @@ export function rejectPhase2(id) {
     method: 'post'
   })
 }
+
+export function sendUserEmail(id, data) {
+  return request({
+    url: `/admin/users/${id}/email`,
+    method: 'post',
+    data
+  })
+}

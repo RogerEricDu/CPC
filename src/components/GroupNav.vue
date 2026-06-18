@@ -17,6 +17,7 @@
       <div class="auth-links">
         <template v-if="currentUser">
           <button v-if="isAdminUser" type="button" @click="$router.push('/admin')">Admin</button>
+          <button type="button" @click="$router.push('/account')">Account</button>
           <span>{{ currentUser.username }} · {{ currentUser.accessLevel }}</span>
           <button type="button" @click="logout">Logout</button>
         </template>
