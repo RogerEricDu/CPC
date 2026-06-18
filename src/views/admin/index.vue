@@ -34,6 +34,18 @@
 
     <div class="table-wrap">
       <table>
+        <colgroup>
+          <col class="col-user">
+          <col class="col-email">
+          <col class="col-pi-email">
+          <col class="col-institution">
+          <col class="col-reason">
+          <col class="col-access">
+          <col class="col-phase">
+          <col class="col-enabled">
+          <col class="col-created">
+          <col class="col-actions">
+        </colgroup>
         <thead>
           <tr>
             <th>User</th>
@@ -50,18 +62,18 @@
         </thead>
         <tbody>
           <tr v-for="user in users" :key="user.id">
-            <td>
+            <td class="user-cell">
               <strong>{{ user.displayName || user.username }}</strong>
               <small>{{ user.username }} · {{ user.role }}</small>
             </td>
-            <td>
-              <span>{{ user.email || '-' }}</span>
+            <td class="email-cell">
+              <span class="address">{{ user.email || '-' }}</span>
               <small :class="verificationClass(user.emailVerified)">
                 {{ user.emailVerified ? 'Verified' : 'Not verified' }}
               </small>
             </td>
-            <td>
-              <span>{{ user.piEmail || '-' }}</span>
+            <td class="email-cell">
+              <span class="address">{{ user.piEmail || '-' }}</span>
               <small v-if="user.piEmail" :class="verificationClass(user.piEmailVerified)">
                 {{ user.piEmailVerified ? 'Verified' : 'Not verified' }}
               </small>
@@ -69,59 +81,61 @@
             </td>
             <td>{{ user.institution || '-' }}</td>
             <td class="reason">{{ user.applicationReason || '-' }}</td>
-            <td><span class="pill">{{ user.accessLevel }}</span></td>
-            <td><span class="pill" :class="phaseClass(user.phase2Status)">{{ user.phase2Status }}</span></td>
-            <td>{{ user.enabled ? 'Yes' : 'No' }}</td>
-            <td>{{ formatDate(user.createdAt) }}</td>
+            <td class="status-cell"><span class="pill">{{ user.accessLevel }}</span></td>
+            <td class="status-cell"><span class="pill" :class="phaseClass(user.phase2Status)">{{ user.phase2Status }}</span></td>
+            <td class="enabled-cell">{{ user.enabled ? 'Yes' : 'No' }}</td>
+            <td class="created-cell">{{ formatDate(user.createdAt) }}</td>
             <td class="actions-cell">
-              <button
-                v-if="user.accessLevel === 'PHASE2' && user.role !== 'ADMIN'"
-                class="btn btn-mini btn-quiet"
-                type="button"
-                title="Revoke Phase II access while keeping the account active"
-                @click="setLevel(user, 'BASIC')"
-              >Set BASIC</button>
-              <button
-                v-if="user.accessLevel !== 'PHASE2' && user.phase2Status !== 'PENDING'"
-                class="btn btn-mini btn-primary"
-                type="button"
-                title="Grant Phase II access directly"
-                @click="setLevel(user, 'PHASE2')"
-              >Grant P2</button>
-              <button
-                v-if="user.phase2Status === 'PENDING'"
-                class="btn btn-mini btn-success"
-                type="button"
-                title="Approve this Phase II access request"
-                @click="approve(user)"
-              >Approve P2</button>
-              <button
-                v-if="user.phase2Status === 'PENDING' && user.role !== 'ADMIN'"
-                class="btn btn-mini btn-warning"
-                type="button"
-                title="Reject only the Phase II request; the BASIC account remains active"
-                @click="reject(user)"
-              >Reject P2</button>
-              <button
-                v-if="!user.enabled"
-                class="btn btn-mini btn-success"
-                type="button"
-                title="Enable this account"
-                @click="enable(user)"
-              >Enable account</button>
-              <button
-                v-if="user.enabled && user.role !== 'ADMIN'"
-                class="btn btn-mini btn-danger"
-                type="button"
-                title="Disable the entire account and block login"
-                @click="disable(user)"
-              >Disable account</button>
-              <button
-                v-if="user.email"
-                class="btn btn-mini btn-email"
-                type="button"
-                @click="openEmail(user)"
-              >Email</button>
+              <div class="actions-list">
+                <button
+                  v-if="user.accessLevel === 'PHASE2' && user.role !== 'ADMIN'"
+                  class="btn btn-mini btn-quiet"
+                  type="button"
+                  title="Revoke Phase II access while keeping the account active"
+                  @click="setLevel(user, 'BASIC')"
+                >Set BASIC</button>
+                <button
+                  v-if="user.accessLevel !== 'PHASE2' && user.phase2Status !== 'PENDING'"
+                  class="btn btn-mini btn-primary"
+                  type="button"
+                  title="Grant Phase II access directly"
+                  @click="setLevel(user, 'PHASE2')"
+                >Grant P2</button>
+                <button
+                  v-if="user.phase2Status === 'PENDING'"
+                  class="btn btn-mini btn-success"
+                  type="button"
+                  title="Approve this Phase II access request"
+                  @click="approve(user)"
+                >Approve P2</button>
+                <button
+                  v-if="user.phase2Status === 'PENDING' && user.role !== 'ADMIN'"
+                  class="btn btn-mini btn-warning"
+                  type="button"
+                  title="Reject only the Phase II request; the BASIC account remains active"
+                  @click="reject(user)"
+                >Reject P2</button>
+                <button
+                  v-if="!user.enabled"
+                  class="btn btn-mini btn-success"
+                  type="button"
+                  title="Enable this account"
+                  @click="enable(user)"
+                >Enable account</button>
+                <button
+                  v-if="user.enabled && user.role !== 'ADMIN'"
+                  class="btn btn-mini btn-danger"
+                  type="button"
+                  title="Disable the entire account and block login"
+                  @click="disable(user)"
+                >Disable account</button>
+                <button
+                  v-if="user.email"
+                  class="btn btn-mini btn-email"
+                  type="button"
+                  @click="openEmail(user)"
+                >Email</button>
+              </div>
             </td>
           </tr>
           <tr v-if="users.length === 0">
@@ -288,15 +302,15 @@ export default {
       const templates = {
         'more-info': {
           subject: 'Additional information required for your CPC account application',
-          message: 'Thank you for applying for a CPC account. We cannot complete the review yet because additional information is required.\n\nPlease reply with your institutional affiliation, research purpose, and PI or supervisor contact information when applicable. After receiving the requested details, we can review your application again.'
+          message: 'Thank you for submitting an application for access to the CPC Data Portal. To complete our review, we require additional information regarding your institutional affiliation, research objectives, and, where applicable, the contact details of your principal investigator or supervisor.\n\nPlease reply with the requested information at your earliest convenience. Your application will be reconsidered once the additional materials have been received.'
         },
         'not-approved': {
-          subject: 'Update on your CPC account application',
-          message: 'Thank you for your interest in the CPC Data Portal. We are unable to approve your account application based on the information currently provided.\n\nYou may reply to this email with additional institutional and research information if you would like the application to be reconsidered.'
+          subject: 'Decision regarding your CPC account application',
+          message: 'Thank you for your interest in the CPC Data Portal. Following review of the information currently available, we are unable to approve your account application at this time.\n\nIf you wish to request reconsideration, please reply with complete institutional details, a clear description of the proposed research, and any relevant principal investigator or supervisor information.'
         },
         'phase2-info': {
           subject: 'Additional information required for CPC Phase II access',
-          message: 'We need additional information before reviewing your request for CPC Phase II access.\n\nPlease reply with a more detailed description of the research project, the data required, the intended analyses, and the supervising PI or responsible investigator.'
+          message: 'Thank you for submitting a request for access to CPC Phase II data. Before a decision can be made, we require a more detailed description of the research project, the specific data requested, the intended analyses, and the supervising principal investigator or responsible investigator.\n\nPlease provide the requested information by replying to this message. The access request will remain pending until the review materials are complete.'
         }
       }
       const template = templates[this.emailDialog.template]
@@ -455,17 +469,21 @@ select {
 
 table {
   width: 100%;
-  min-width: 1785px;
+  min-width: 1960px;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
 th,
 td {
+  box-sizing: border-box;
   padding: 11px 12px;
   border-bottom: 1px solid #e4e7ed;
   text-align: left;
   vertical-align: top;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 th {
@@ -473,41 +491,26 @@ th {
   color: #2b4275;
 }
 
-th:nth-child(1),
-td:nth-child(1) {
-  width: 150px;
+.col-user { width: 180px; }
+.col-email { width: 250px; }
+.col-pi-email { width: 250px; }
+.col-institution { width: 210px; }
+.col-reason { width: 320px; }
+.col-access { width: 110px; }
+.col-phase { width: 140px; }
+.col-enabled { width: 100px; }
+.col-created { width: 170px; }
+.col-actions { width: 230px; }
+
+.user-cell strong,
+.address {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
-th:nth-child(2),
-td:nth-child(2),
-th:nth-child(3),
-td:nth-child(3) {
-  width: 200px;
-}
-
-th:nth-child(4),
-td:nth-child(4) {
-  width: 160px;
-}
-
-th:nth-child(6),
-td:nth-child(6) {
-  width: 95px;
-}
-
-th:nth-child(7),
-td:nth-child(7) {
-  width: 120px;
-}
-
-th:nth-child(8),
-td:nth-child(8) {
-  width: 90px;
-}
-
-th:nth-child(9),
-td:nth-child(9) {
-  width: 170px;
+.email-cell {
+  line-height: 1.4;
 }
 
 td small {
@@ -522,11 +525,6 @@ td small.verified {
 td small.unverified {
   color: #b42318;
   font-weight: 600;
-}
-
-.reason-col,
-.reason {
-  width: 300px;
 }
 
 .reason {
@@ -544,6 +542,8 @@ td small.unverified {
   color: #303133;
   font-size: 0.82rem;
   font-weight: 700;
+  max-width: 100%;
+  white-space: nowrap;
 }
 
 .pending {
@@ -562,18 +562,28 @@ td small.unverified {
 }
 
 .actions-cell {
+  width: auto;
+}
+
+.actions-list {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 7px;
-  width: 300px;
+  width: 100%;
 }
 
-.actions-col {
-  width: 300px;
-}
-
-.actions-cell button {
+.actions-list button {
   white-space: nowrap;
+}
+
+.status-cell,
+.enabled-cell {
+  white-space: nowrap;
+}
+
+.created-cell {
+  white-space: normal;
 }
 
 .empty,
