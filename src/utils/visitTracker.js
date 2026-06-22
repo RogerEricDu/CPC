@@ -1,5 +1,5 @@
 const VISITOR_KEY = 'cpc_visitor_id'
-let lastTracked = ''
+const SESSION_KEY = 'cpc_visit_tracked'
 
 function visitorId() {
   let value = localStorage.getItem(VISITOR_KEY)
@@ -10,17 +10,13 @@ function visitorId() {
   return value
 }
 
-export function trackPageVisit(route) {
-  const path = route && route.fullPath ? route.fullPath : window.location.hash.replace(/^#/, '') || '/'
-  const dedupeKey = `${path}|${document.title}`
-  if (lastTracked === dedupeKey) return
-  lastTracked = dedupeKey
+export function trackSiteVisit() {
+  if (sessionStorage.getItem(SESSION_KEY)) return
+  sessionStorage.setItem(SESSION_KEY, '1')
 
   const baseURL = process.env.VUE_APP_BASE_API || '/api'
   const payload = JSON.stringify({
     visitorId: visitorId(),
-    path,
-    title: document.title,
     language: navigator.language || '',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
     screenSize: `${window.screen.width}x${window.screen.height}`
@@ -39,6 +35,6 @@ export function trackPageVisit(route) {
       credentials: 'same-origin'
     }).catch(() => {})
   } catch (error) {
-    // Analytics must never interfere with page navigation.
+    sessionStorage.removeItem(SESSION_KEY)
   }
 }

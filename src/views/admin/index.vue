@@ -3,7 +3,7 @@
     <div class="admin-header">
       <div>
         <h1>Admin</h1>
-        <p>{{ activeView === 'accounts' ? 'Manage user access, approvals, and account status.' : 'Review site visits, trends, and geographic distribution.' }}</p>
+        <p v-if="activeView === 'accounts'">Manage user access, approvals, and account status.</p>
       </div>
       <button class="btn btn-primary" type="button" @click="refreshActive">Refresh</button>
     </div>

@@ -1,6 +1,6 @@
 import VueRouter from 'vue-router'
 import { isAdmin, isLoggedIn } from '@/utils/auth'
-import { trackPageVisit } from '@/utils/visitTracker'
+import { trackSiteVisit } from '@/utils/visitTracker'
 
 const router = new VueRouter({
     // mode: 'history', // 路由history模式，地址栏不会出现丑丑的 #
@@ -122,7 +122,7 @@ router.afterEach((to) => {
     const affix = 'CPC'
     const title = to.meta.title
     document.title = title ? `${title} - ${affix}` : affix
-    window.setTimeout(() => trackPageVisit(to), 0)
+    window.setTimeout(() => trackSiteVisit(), 0)
 })
 
 

@@ -1,25 +1,9 @@
 <template>
   <section class="analytics-panel">
-    <div class="analytics-toolbar">
-      <div>
-        <h2>Visit Analytics</h2>
-        <p>IP-based page-view records and geographic distribution. Analytics data is visible only to administrators.</p>
-      </div>
-      <label>
-        Reporting period
-        <select v-model.number="days" @change="load">
-          <option :value="7">Last 7 days</option>
-          <option :value="30">Last 30 days</option>
-          <option :value="90">Last 90 days</option>
-          <option :value="365">Last 12 months</option>
-        </select>
-      </label>
-    </div>
-
     <p v-if="error" class="analytics-error">{{ error }}</p>
 
     <div class="metric-grid">
-      <article><span>Total page views</span><strong>{{ summary.totalVisits || 0 }}</strong></article>
+      <article><span>Total visits</span><strong>{{ summary.totalVisits || 0 }}</strong></article>
       <article><span>Unique visitors</span><strong>{{ summary.uniqueVisitors || 0 }}</strong></article>
       <article><span>Today</span><strong>{{ summary.todayVisits || 0 }}</strong></article>
       <article><span>Last 7 days</span><strong>{{ summary.weekVisits || 0 }}</strong></article>
@@ -30,14 +14,12 @@
       <article class="chart-card">
         <header>
           <h3>Weekly visits</h3>
-          <span>Daily page views and unique visitors</span>
         </header>
         <div ref="weeklyChart" class="trend-chart"></div>
       </article>
       <article class="chart-card">
         <header>
           <h3>Monthly visits</h3>
-          <span>Last 30 days</span>
         </header>
         <div ref="monthlyChart" class="trend-chart"></div>
       </article>
@@ -45,21 +27,14 @@
 
     <article class="chart-card map-card">
       <header>
-        <div>
-          <h3>Global visit distribution</h3>
-          <span>Hover for totals; drag to pan and use the mouse wheel to zoom.</span>
-        </div>
-        <span class="map-source">China boundary source: Alibaba Cloud DataV / AMap</span>
+        <h3>Global visit distribution</h3>
       </header>
       <div ref="worldMap" class="world-map"></div>
     </article>
 
     <article class="records-card">
       <header>
-        <div>
-          <h3>Visit records</h3>
-          <span>{{ records.total || 0 }} recorded page views</span>
-        </div>
+        <h3>Visit records</h3>
       </header>
       <div class="records-wrap">
         <table>
@@ -68,7 +43,6 @@
               <th>Time</th>
               <th>IP address</th>
               <th>Country / region</th>
-              <th>Page</th>
               <th>Visitor</th>
               <th>Environment</th>
             </tr>
@@ -78,7 +52,6 @@
               <td>{{ item.visitedAt }}</td>
               <td class="mono">{{ item.ipAddress }}</td>
               <td>{{ item.countryName || 'Unknown' }} <small>{{ item.countryCode }}</small></td>
-              <td><strong>{{ item.title || '-' }}</strong><small>{{ item.path }}</small></td>
               <td class="mono">{{ shortVisitor(item.visitorId) }}</td>
               <td>
                 <span>{{ item.language || '-' }} · {{ item.timezone || '-' }}</span>
@@ -86,7 +59,7 @@
               </td>
             </tr>
             <tr v-if="!records.items || records.items.length === 0">
-              <td colspan="6" class="empty-records">No visits recorded yet.</td>
+              <td colspan="5" class="empty-records">No visits recorded yet.</td>
             </tr>
           </tbody>
         </table>
@@ -112,7 +85,6 @@ export default {
   name: 'VisitAnalytics',
   data() {
     return {
-      days: 30,
       page: 1,
       size: 25,
       summary: {},
@@ -145,7 +117,6 @@ export default {
       this.error = ''
       try {
         const response = await getVisitAnalytics({
-          days: this.days,
           page: this.page,
           size: this.size
         })
@@ -184,7 +155,7 @@ export default {
         animationDuration: 500,
         color: ['#315aa8', '#177245'],
         tooltip: { trigger: 'axis' },
-        legend: { data: ['Page views', 'Unique visitors'], bottom: 0 },
+        legend: { data: ['Visits', 'Unique visitors'], bottom: 0 },
         grid: { left: 46, right: 20, top: 24, bottom: 52 },
         xAxis: {
           type: 'category',
@@ -200,7 +171,7 @@ export default {
         },
         series: [
           {
-            name: 'Page views',
+            name: 'Visits',
             type: 'line',
             smooth: true,
             symbolSize: 7,
@@ -237,7 +208,7 @@ export default {
               || (params.data && params.data.countryName)
               || params.name
             const visits = Number.isFinite(params.value) ? params.value : 0
-            return `${countryName}<br>Page views: ${visits}<br>Unique visitors: ${uniqueByCode[params.name] || 0}`
+            return `${countryName}<br>Visits: ${visits}<br>Unique visitors: ${uniqueByCode[params.name] || 0}`
           }
         },
         visualMap: {
@@ -286,7 +257,6 @@ export default {
   gap: 18px;
 }
 
-.analytics-toolbar,
 .chart-card header,
 .records-card header {
   display: flex;
@@ -295,14 +265,6 @@ export default {
   align-items: flex-start;
 }
 
-.analytics-toolbar {
-  padding: 18px;
-  border: 1px solid #e1e6ef;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.analytics-toolbar h2,
 .chart-card h3,
 .records-card h3 {
   margin: 0 0 5px;
@@ -310,39 +272,10 @@ export default {
   line-height: 1.25;
 }
 
-.analytics-toolbar h2 {
-  height: auto;
-  padding: 0;
-  background: transparent;
-  font-size: 1.35rem;
-}
-
-.analytics-toolbar h2::before {
-  display: none;
-}
-
-.analytics-toolbar p,
 .chart-card header span,
 .records-card header span {
   color: #667085;
   font-size: 0.88rem;
-}
-
-.analytics-toolbar label {
-  display: grid;
-  gap: 6px;
-  color: #475467;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.analytics-toolbar select {
-  min-width: 165px;
-  height: 38px;
-  border: 1px solid #cfd6e2;
-  border-radius: 6px;
-  background: #fff;
-  padding: 0 10px;
 }
 
 .metric-grid {
@@ -396,15 +329,6 @@ export default {
   height: 540px;
 }
 
-.map-card header {
-  align-items: center;
-}
-
-.map-source {
-  max-width: 330px;
-  text-align: right;
-}
-
 .records-wrap {
   margin-top: 14px;
   overflow-x: auto;
@@ -414,7 +338,7 @@ export default {
 
 table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 920px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -436,9 +360,8 @@ th {
 th:nth-child(1) { width: 155px; }
 th:nth-child(2) { width: 135px; }
 th:nth-child(3) { width: 155px; }
-th:nth-child(4) { width: 290px; }
-th:nth-child(5) { width: 165px; }
-th:nth-child(6) { width: 240px; }
+th:nth-child(4) { width: 180px; }
+th:nth-child(5) { width: 295px; }
 
 td small {
   display: block;
@@ -491,10 +414,6 @@ td small {
 
   .chart-grid {
     grid-template-columns: 1fr;
-  }
-
-  .analytics-toolbar {
-    flex-direction: column;
   }
 
   .world-map {
