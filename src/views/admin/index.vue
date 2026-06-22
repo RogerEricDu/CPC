@@ -3,11 +3,17 @@
     <div class="admin-header">
       <div>
         <h1>Admin</h1>
-        <p>Manage CPC user access levels, Phase II approvals, and account status.</p>
+        <p>{{ activeView === 'accounts' ? 'Manage user access, approvals, and account status.' : 'Review site visits, trends, and geographic distribution.' }}</p>
       </div>
-      <button class="btn btn-primary" type="button" @click="loadUsers">Refresh</button>
+      <button class="btn btn-primary" type="button" @click="refreshActive">Refresh</button>
     </div>
 
+    <nav class="admin-tabs" aria-label="Admin sections">
+      <button :class="{ active: activeView === 'accounts' }" type="button" @click="activeView = 'accounts'">Account management</button>
+      <button :class="{ active: activeView === 'analytics' }" type="button" @click="activeView = 'analytics'">Visit analytics</button>
+    </nav>
+
+    <section v-if="activeView === 'accounts'">
     <form class="filters" @submit.prevent="searchUsers">
       <input v-model.trim="filters.search" placeholder="Search username, applicant email, PI email, institution">
       <select v-model="filters.accessLevel">
@@ -150,6 +156,9 @@
       <span>Page {{ page }} · Total {{ total }}</span>
       <button class="btn btn-quiet" :disabled="page >= pageCount" @click="goPage(page + 1)">Next</button>
     </div>
+    </section>
+
+    <VisitAnalytics v-else ref="visitAnalytics" />
 
     <div v-if="emailDialog.open" class="dialog-backdrop" @click.self="closeEmail">
       <section class="email-dialog" role="dialog" aria-modal="true" aria-labelledby="email-dialog-title">
@@ -203,11 +212,14 @@ import {
   sendUserEmail,
   setUserAccessLevel
 } from '@/api/admin'
+import VisitAnalytics from './VisitAnalytics.vue'
 
 export default {
   name: 'AdminPage',
+  components: { VisitAnalytics },
   data() {
     return {
+      activeView: 'accounts',
       users: [],
       total: 0,
       page: 1,
@@ -239,6 +251,12 @@ export default {
     this.loadUsers()
   },
   methods: {
+    refreshActive() {
+      if (this.activeView === 'analytics') {
+        return this.$refs.visitAnalytics && this.$refs.visitAnalytics.refresh()
+      }
+      return this.loadUsers()
+    },
     async loadUsers() {
       this.error = ''
       try {
@@ -368,6 +386,33 @@ export default {
   padding: 0 2px 16px;
   margin-bottom: 4px;
   border-bottom: 1px solid #e4e7ed;
+}
+
+.admin-tabs {
+  display: inline-flex;
+  gap: 5px;
+  margin: 16px 0;
+  padding: 5px;
+  border: 1px solid #dbe2ed;
+  border-radius: 8px;
+  background: #f3f6fa;
+}
+
+.admin-tabs button {
+  min-height: 38px;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #475467;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.admin-tabs button.active {
+  background: #315aa8;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(49, 90, 168, 0.2);
 }
 
 .admin-header h1 {

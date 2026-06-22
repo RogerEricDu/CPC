@@ -4,9 +4,6 @@
       <div class="col-sm">
         <h3>QR Code</h3>
         <img style="width:140px" src="@/assets/img/qrcode1.png">
-        <a style="display:block" href="https://www.revolvermaps.com/livestats/5890s438kz2/">
-          <img src="//rf.revolvermaps.com/w/3/s/a/5/0/2/ffffff/010020/aa0000/5890s438kz2.png" alt="Stats" style="border:0;">
-        </a>
 
       </div>
       <div class="col-sm">

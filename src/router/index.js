@@ -1,5 +1,6 @@
 import VueRouter from 'vue-router'
 import { isAdmin, isLoggedIn } from '@/utils/auth'
+import { trackPageVisit } from '@/utils/visitTracker'
 
 const router = new VueRouter({
     // mode: 'history', // 路由history模式，地址栏不会出现丑丑的 #
@@ -68,11 +69,6 @@ const router = new VueRouter({
             meta: {title: 'About'}
         },
         {
-            path: '/statistics_ip',
-            component: () => import('@/views/statistics_ip/index'),
-            meta: {title: 'STA_IP'}
-        },
-        {
             path: '/login',
             component: () => import('@/views/login/index'),
             meta: {title: 'Login'}
@@ -126,6 +122,7 @@ router.afterEach((to) => {
     const affix = 'CPC'
     const title = to.meta.title
     document.title = title ? `${title} - ${affix}` : affix
+    window.setTimeout(() => trackPageVisit(to), 0)
 })
 
 

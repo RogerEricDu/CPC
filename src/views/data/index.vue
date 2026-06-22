@@ -10,32 +10,7 @@
       </p>
     </section>
 
-    <AuthRequiredOverlay
-      :allowed="canAccessPhase1"
-      locked-text="Please log in to access downloads."
-      :action-text="isLoggedIn ? 'Refresh access' : 'Login'"
-      @action="goLogin"
-    >
-      <template #preview>
-        <section class="phase-section preview-section">
-          <h2>The CPC Phase I Data Availability</h2>
-          <p>
-            The release of the CPC Phase I data has been approved by The Ministry of Science and Technology of the People's Republic of China
-            (permission no. 2022BAT2392). File downloads require login.
-          </p>
-          <h3>CPC pangenome reference</h3>
-          <div class="file-group preview-group">
-            <h4>CPC.Phase1.CHM13v2-full</h4>
-            <ul>
-              <li><span>CPC.Phase1.CHM13v2-full.gfa.gz</span></li>
-              <li><span>CPC.Phase1.CHM13v2-full.gbwt</span></li>
-              <li><span>CPC.Phase1.CHM13v2-full.gg</span></li>
-            </ul>
-          </div>
-        </section>
-      </template>
-
-      <section class="phase-section">
+    <section class="phase-section">
         <h2>The CPC Phase I Data Availability</h2>
         <p>
           The release of the CPC Phase I data has been approved by The Ministry of Science and Technology of the People's Republic of China
@@ -114,8 +89,7 @@
             </li>
           </ul>
         </div>
-      </section>
-    </AuthRequiredOverlay>
+    </section>
 
     <AuthRequiredOverlay
       :allowed="canAccessPhase2"
@@ -231,7 +205,7 @@ import AuthRequiredOverlay from '@/components/AuthRequiredOverlay.vue'
 import DownloadCell from '@/components/DownloadCell.vue'
 import { applyPhase2 } from '@/api/auth'
 import { downloadDataFile, getDataFiles } from '@/api/dataAccess'
-import { getCurrentUser, hasBasicAccess, hasPhase2Access, isLoggedIn as authIsLoggedIn, setCurrentUser } from '@/utils/auth'
+import { getCurrentUser, hasPhase2Access, isLoggedIn as authIsLoggedIn, setCurrentUser } from '@/utils/auth'
 
 export default {
   name: 'DataPage',
@@ -262,9 +236,6 @@ export default {
   computed: {
     isLoggedIn() {
       return authIsLoggedIn()
-    },
-    canAccessPhase1() {
-      return hasBasicAccess(this.currentUser)
     },
     canAccessPhase2() {
       return hasPhase2Access(this.currentUser)
