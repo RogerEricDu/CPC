@@ -43,8 +43,7 @@
               <th>Time</th>
               <th>IP address</th>
               <th>Country / region</th>
-              <th>Visitor</th>
-              <th>Environment</th>
+              <th>User</th>
             </tr>
           </thead>
           <tbody>
@@ -52,14 +51,10 @@
               <td>{{ item.visitedAt }}</td>
               <td class="mono">{{ item.ipAddress }}</td>
               <td>{{ item.countryName || 'Unknown' }} <small>{{ item.countryCode }}</small></td>
-              <td class="mono">{{ shortVisitor(item.visitorId) }}</td>
-              <td>
-                <span>{{ item.language || '-' }} · {{ item.timezone || '-' }}</span>
-                <small>{{ item.screenSize || '-' }}</small>
-              </td>
+              <td>{{ item.visitor || 'Anonymous' }}</td>
             </tr>
             <tr v-if="!records.items || records.items.length === 0">
-              <td colspan="5" class="empty-records">No visits recorded yet.</td>
+              <td colspan="4" class="empty-records">No visits recorded yet.</td>
             </tr>
           </tbody>
         </table>
@@ -135,10 +130,6 @@ export default {
     changePage(page) {
       this.page = page
       this.load()
-    },
-    shortVisitor(value) {
-      if (!value) return '-'
-      return value.length > 18 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value
     },
     renderCharts() {
       this.charts.forEach(chart => chart.dispose())
@@ -357,11 +348,10 @@ th {
   color: #344054;
 }
 
-th:nth-child(1) { width: 155px; }
-th:nth-child(2) { width: 135px; }
-th:nth-child(3) { width: 155px; }
-th:nth-child(4) { width: 180px; }
-th:nth-child(5) { width: 295px; }
+th:nth-child(1) { width: 170px; }
+th:nth-child(2) { width: 160px; }
+th:nth-child(3) { width: 240px; }
+th:nth-child(4) { width: 160px; }
 
 td small {
   display: block;
