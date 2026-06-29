@@ -6,6 +6,7 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "build:cpc-dev": "npm run validate:map && vue-cli-service build --mode cpc-dev",
+    "build:cpc-prod": "npm run validate:map && vue-cli-service build --mode cpc-prod",
     "validate:map": "node scripts/validate-world-map.js",
     "lint": "vue-cli-service lint"
   },
