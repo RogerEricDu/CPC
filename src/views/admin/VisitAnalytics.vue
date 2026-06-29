@@ -51,7 +51,7 @@
               <td>{{ item.visitedAt }}</td>
               <td class="mono">{{ item.ipAddress }}</td>
               <td>{{ item.countryName || 'Unknown' }} <small>{{ item.countryCode }}</small></td>
-              <td>{{ item.visitor || 'Anonymous' }}</td>
+              <td>{{ item.visitor || '' }}</td>
             </tr>
             <tr v-if="!records.items || records.items.length === 0">
               <td colspan="4" class="empty-records">No visits recorded yet.</td>
