@@ -141,6 +141,13 @@
                   type="button"
                   @click="openEmail(user)"
                 >Email</button>
+                <button
+                  v-if="user.role !== 'ADMIN'"
+                  class="btn btn-mini btn-delete"
+                  type="button"
+                  title="Delete this account"
+                  @click="deleteAccount(user)"
+                >Delete account</button>
               </div>
             </td>
           </tr>
@@ -205,6 +212,7 @@
 <script>
 import {
   approvePhase2,
+  deleteUser,
   disableUser,
   enableUser,
   getAdminUsers,
@@ -302,6 +310,17 @@ export default {
     },
     async disable(user) {
       await disableUser(user.id)
+      await this.loadUsers()
+    },
+    async deleteAccount(user) {
+      const label = user.displayName || user.username
+      const confirmed = window.confirm(`Delete account "${label}"? This cannot be undone.`)
+      if (!confirmed) return
+      await deleteUser(user.id)
+      this.$message.success('Account deleted.')
+      if (this.users.length === 1 && this.page > 1) {
+        this.page -= 1
+      }
       await this.loadUsers()
     },
     openEmail(user) {
@@ -493,6 +512,11 @@ select {
   color: #fff;
 }
 
+.btn-delete {
+  background: #5f2530;
+  color: #fff;
+}
+
 .btn-quiet {
   border-color: #9aa8bc;
   background: #fff;
@@ -545,7 +569,7 @@ th {
 .col-phase { width: 140px; }
 .col-enabled { width: 100px; }
 .col-created { width: 170px; }
-.col-actions { width: 230px; }
+.col-actions { width: 300px; }
 
 .user-cell strong,
 .address {

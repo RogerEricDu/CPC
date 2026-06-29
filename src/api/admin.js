@@ -30,6 +30,13 @@ export function disableUser(id) {
   })
 }
 
+export function deleteUser(id) {
+  return request({
+    url: `/admin/users/${id}`,
+    method: 'delete'
+  })
+}
+
 export function approvePhase2(id) {
   return request({
     url: `/admin/users/${id}/phase2/approve`,
