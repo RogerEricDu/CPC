@@ -1,551 +1,393 @@
 <template>
-  <div class="sv-query">
-    <div class="query-form">
-      
-      <div class="form-group">
-        <label for="svType">SV Type:</label>
-        <select id="svType" v-model="queryParams.SVType" class="form-select">
-          <option value="">All Types</option>
-          <option value="DEL">Deletion (DEL)</option>
-          <option value="DUP">Duplication (DUP)</option>
-          <option value="INS">Insertion (INS)</option>
-          <option value="INV">Inversion (INV)</option>
-          <option value="BND">Breakend (BND)</option>
-        </select>
+  <div class="variant-query-page">
+    <section class="query-card">
+      <div class="query-card-heading">
+        <div>
+          <h2>SV query</h2>
+          <p>Search structural variants by identifier, type, or overlapping genomic interval.</p>
+        </div>
+        <span class="assembly-badge">CHM13v2.0</span>
       </div>
 
-      <div class="form-row">
+      <div class="query-grid">
+        <div class="form-group id-field">
+          <label for="sv-id">SV ID</label>
+          <input id="sv-id" v-model.trim="query.uniqueId" class="form-control" type="text" placeholder="CPC ID or source ID">
+        </div>
         <div class="form-group">
-          <label for="svChromosome">Chromosome:</label>
-          <select id="svChromosome" v-model="queryParams.chromosome" class="form-select">
-            <option value="">Select Chromosome</option>
-            <option v-for="chr in chromosomes" :key="chr" :value="chr">
-              {{ chr }}
-            </option>
+          <label for="sv-type">SV type</label>
+          <select id="sv-type" v-model="query.SVType" class="form-control">
+            <option value="">All types</option>
+            <option value="DEL">Deletion (DEL)</option>
+            <option value="DUP">Duplication (DUP)</option>
+            <option value="INS">Insertion (INS)</option>
+            <option value="INV">Inversion (INV)</option>
           </select>
         </div>
-        
         <div class="form-group">
-          <label for="uniqueId">SV ID:</label>
-          <input 
-            type="text" 
-            id="uniqueId"
-            v-model="queryParams.uniqueId"
-            placeholder="e.g., SV_001"
-            class="form-input"
-          >
+          <label for="sv-chromosome">Chromosome</label>
+          <select id="sv-chromosome" v-model="query.chromosome" class="form-control">
+            <option value="">All chromosomes</option>
+            <option v-for="chromosome in chromosomes" :key="chromosome" :value="chromosome">{{ chromosome }}</option>
+          </select>
         </div>
-      </div>
-
-      <div class="form-row">
         <div class="form-group">
-          <label for="start">Start Position:</label>
-          <input 
-            type="number" 
-            id="start"
-            v-model.number="queryParams.start"
-            placeholder="Start position"
-            class="form-input"
-          >
+          <label for="sv-start">Region start</label>
+          <input id="sv-start" v-model.number="query.start" class="form-control" type="number" min="1" placeholder="Start coordinate">
         </div>
-        
         <div class="form-group">
-          <label for="end">End Position:</label>
-          <input 
-            type="number" 
-            id="end"
-            v-model.number="queryParams.end"
-            placeholder="End position"
-            class="form-input"
-          >
+          <label for="sv-end">Region end</label>
+          <input id="sv-end" v-model.number="query.end" class="form-control" type="number" min="1" placeholder="End coordinate">
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="population">Population:</label>
-        <select id="population" v-model="queryParams.population" class="form-select">
-          <option value="">All Populations</option>
-          <option value="han">Han Chinese</option>
-          <option value="zang">Tibetan</option>
-          <option value="miao">Miao</option>
-          <option value="mongolian">Mongolian</option>
-          <option value="southern">Southern Groups</option>
-          <option value="northern">Northern Groups</option>
-        </select>
-      </div>
-
-      <div class="form-actions">
-        <button @click="handleReset" class="reset-btn">
-          Reset
-        </button>
-        <button @click="handleQuery" :disabled="loading" class="query-btn">
-          {{ loading ? 'Searching...' : 'Search SV' }}
+      <div class="query-actions">
+        <button type="button" class="secondary-button" :disabled="loading" @click="reset">Reset</button>
+        <button type="button" class="primary-button" :disabled="loading" @click="runQuery(true)">
+          {{ loading ? 'Searching…' : 'Search SVs' }}
         </button>
       </div>
-    </div>
+    </section>
 
-    <!-- 结果展示 -->
-    <div v-if="results" class="results-section">
-      <div class="results-header">
-        <h3>SV Query Results</h3>
-        <div class="results-info">
-          Total: {{ total }} records
+    <div v-if="error" class="status-message error-message">{{ error }}</div>
+    <div v-if="loading" class="loading-state"><span></span>Searching indexed variants…</div>
+
+    <template v-if="searched && !loading">
+      <div v-if="frequencyLoading" class="map-loading"><span></span>Loading population frequencies…</div>
+      <FrequencyMap v-else-if="frequency" :frequency="frequency" />
+      <div v-else-if="frequencyError" class="status-message warning-message">{{ frequencyError }}</div>
+
+      <section v-if="results.length" class="results-card">
+        <div class="results-heading">
+          <div>
+            <h3>Query results</h3>
+            <p>{{ formatInteger(total) }} variants · Page {{ page }} of {{ totalPages }}</p>
+          </div>
+          <label class="page-size-control">
+            Rows
+            <select v-model.number="size" @change="changePageSize">
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+          </label>
         </div>
-      </div>
 
-      <!-- 分页控件 -->
-      <div class="pagination" v-if="total > 0">
-        <button 
-          @click="prevPage" 
-          :disabled="currentPage === 1"
-          class="page-btn"
-        >
-          Previous
-        </button>
-        <span class="page-info">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
-        <button 
-          @click="nextPage" 
-          :disabled="currentPage === totalPages"
-          class="page-btn"
-        >
-          Next
-        </button>
-      </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>SV ID</th>
+                <th>Source ID</th>
+                <th>Type</th>
+                <th>Interval</th>
+                <th>Length</th>
+                <th>Panel frequency</th>
+                <th>Novelty</th>
+                <th class="actions-column">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="variant in results"
+                :key="variant.sourceId"
+                :class="{ selected: selectedVariant && selectedVariant.sourceId === variant.sourceId }"
+                @click="variant.frequencyAvailable && selectVariant(variant)"
+              >
+                <td class="identifier">{{ variant.id }}</td>
+                <td class="source-id">{{ variant.sourceId }}</td>
+                <td><span class="type-badge" :class="variant.type.toLowerCase()">{{ variant.type }}</span></td>
+                <td>{{ variant.chromosome }}:{{ formatInteger(variant.start) }}-{{ formatInteger(variant.end) }}</td>
+                <td>{{ formatInteger(variant.length) }} bp</td>
+                <td>{{ formatPercent(variant.globalFrequency) }}</td>
+                <td>{{ variant.novelty }}</td>
+                <td class="row-actions" @click.stop>
+                  <button
+                    type="button"
+                    class="frequency-button"
+                    :disabled="!variant.frequencyAvailable"
+                    @click="selectVariant(variant)"
+                  >Frequency</button>
+                  <button type="button" class="browser-button" @click="openBrowser(variant)">Genome browser</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <div class="results-table" v-if="results.length > 0">
-        <table>
-          <thead>
-            <tr>
-              <th>SV ID</th>
-              <th>Type</th>
-              <th>Chromosome</th>
-              <th>Start</th>
-              <th>End</th>
-              <th>Size (bp)</th>
-              <th>Population</th>
-              <th>Allele Frequency</th>
-              <th>Sequence</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="result in results" :key="result.svId">
-              <td>{{ result.uniqueId || 'N/A' }}</td>
-              <td>
-                <span class="sv-type" :class="result.SVType ? result.SVType.toLowerCase() : ''">
-                  {{ result.SVType || 'N/A' }}
-                </span>
-              </td>
-              <td>{{ result.chromosome || 'N/A' }}</td>
-              <td>{{ result.start ? result.start.toLocaleString() : 'N/A' }}</td>
-              <td>{{ result.end ? result.end.toLocaleString() : 'N/A' }}</td>
-              <td>{{ calculateSize(result) }}</td>
-              <td>{{ result.population || 'N/A' }}</td>
-              <td>{{ result.alleleFrequency ? result.alleleFrequency.toFixed(4) : 'N/A' }}</td>
-              <td class="sequence-cell">
-                <span v-if="result.sequence" :title="result.sequence">
-                  {{ truncateSequence(result.sequence) }}
-                </span>
-                <span v-else>N/A</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="pagination">
+          <button type="button" :disabled="page <= 1 || loading" @click="changePage(page - 1)">Previous</button>
+          <span>Page {{ page }} / {{ totalPages }}</span>
+          <button type="button" :disabled="page >= totalPages || loading" @click="changePage(page + 1)">Next</button>
+        </div>
+      </section>
 
-      <div v-else class="no-results">
-        <p>No results found</p>
-      </div>
+      <div v-else class="empty-state">No structural variants matched the query.</div>
+    </template>
 
-      <!-- 分页控件 -->
-      <div class="pagination" v-if="total > 0">
-        <button 
-          @click="prevPage" 
-          :disabled="currentPage === 1"
-          class="page-btn"
-        >
-          Previous
-        </button>
-        <span class="page-info">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
-        <button 
-          @click="nextPage" 
-          :disabled="currentPage === totalPages"
-          class="page-btn"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-
-    <!-- 错误信息 -->
-    <div v-if="error" class="error-message">
-      <p>{{ error }}</p>
-    </div>
+    <GenomeBrowserModal
+      kind="sv"
+      :visible="browserVisible"
+      :variant="browserVariant"
+      @close="browserVisible = false"
+    />
   </div>
 </template>
 
 <script>
-import { searchSV } from '@/api/variant'
+import { getSvFrequency, searchSV } from '@/api/variant'
+import FrequencyMap from '@/components/variant/FrequencyMap.vue'
+import GenomeBrowserModal from '@/components/variant/GenomeBrowserModal.vue'
 
 export default {
   name: 'SVQuery',
+  components: { FrequencyMap, GenomeBrowserModal },
   data() {
     return {
-      queryParams: {
+      query: {
+        uniqueId: '',
+        SVType: '',
         chromosome: '',
         start: null,
-        end: null,
-        uniqueId: '',
-        population: '',
-        SVType: '',
-        page: 1,
-        size: 10
+        end: null
       },
-      results: null,
+      chromosomes: Array.from({ length: 22 }, (_, index) => 'chr' + (index + 1)).concat(['chrX', 'chrY', 'chrM']),
+      page: 1,
+      size: 20,
       total: 0,
-      currentPage: 1,
-      pageSize: 10,
+      results: [],
+      selectedVariant: null,
+      frequency: null,
+      frequencyLoading: false,
+      frequencyError: '',
+      frequencyRequestId: 0,
       loading: false,
-      error: null,
-      chromosomes: Array.from({length: 22}, (_, i) => `chr${i + 1}`).concat(['chrX', 'chrY'])
+      searched: false,
+      error: '',
+      browserVisible: false,
+      browserVariant: null
     }
   },
   computed: {
     totalPages() {
-      return Math.ceil(this.total / this.pageSize)
+      return Math.max(1, Math.ceil(this.total / this.size))
     }
   },
   methods: {
-    async handleQuery() {
+    async runQuery(resetPage) {
+      if (this.loading) return
+      if (this.query.start && this.query.end && this.query.end < this.query.start) {
+        this.error = 'Region end must be greater than or equal to region start.'
+        return
+      }
+      if (resetPage) this.page = 1
       this.loading = true
-      this.error = null
-      
+      this.error = ''
+      this.frequency = null
+      this.frequencyError = ''
+      this.searched = true
       try {
-        // 构建查询参数
-        const params = {
-          ...this.queryParams,
-          page: this.currentPage,
-          size: this.pageSize
-        }
-
-        // 清理空参数
-        Object.keys(params).forEach(key => {
-          if (params[key] === '' || params[key] === null) {
-            delete params[key]
-          }
+        const response = await searchSV({
+          uniqueId: this.query.uniqueId || null,
+          SVType: this.query.SVType || null,
+          chromosome: this.query.chromosome || null,
+          start: this.query.start || null,
+          end: this.query.end || null,
+          page: this.page,
+          size: this.size
         })
-
-        const response = await searchSV(params)
-        
         this.results = response.data || []
-        this.total = response.total || 0
-        
-        if (this.results.length === 0) {
-          this.error = 'No results found for the given criteria.'
+        this.total = Number(response.total || 0)
+        const initialVariant = this.results.find(variant => variant.frequencyAvailable)
+        if (initialVariant) {
+          await this.selectVariant(initialVariant)
+        } else {
+          this.selectedVariant = this.results[0] || null
+          if (this.results.length) this.frequencyError = 'Population frequencies are not available for the variants on this page.'
         }
-      } catch (err) {
-        console.error('SV query error:', err)
-        this.error = 'Failed to search SV data. Please try again.'
+      } catch (error) {
         this.results = []
         this.total = 0
+        this.selectedVariant = null
+        this.error = (error.response && error.response.data && error.response.data.message) || 'Unable to search SV data.'
       } finally {
         this.loading = false
       }
     },
-
-    handleReset() {
-      this.queryParams = {
-        chromosome: '',
-        start: null,
-        end: null,
-        uniqueId: '',
-        population: '',
-        SVType: '',
-        page: 1,
-        size: 10
-      }
-      this.results = null
-      this.currentPage = 1
-      this.error = null
-    },
-
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++
-        this.handleQuery()
+    async selectVariant(variant) {
+      if (!variant || !variant.frequencyAvailable) return
+      this.selectedVariant = variant
+      this.frequency = null
+      this.frequencyError = ''
+      const requestId = ++this.frequencyRequestId
+      this.frequencyLoading = true
+      try {
+        const response = await getSvFrequency({ id: variant.id })
+        if (requestId === this.frequencyRequestId) this.frequency = response.data
+      } catch (error) {
+        if (requestId === this.frequencyRequestId) {
+          this.frequencyError = (error.response && error.response.data && error.response.data.message) || 'Population frequencies are unavailable for this SV.'
+        }
+      } finally {
+        if (requestId === this.frequencyRequestId) this.frequencyLoading = false
       }
     },
-
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--
-        this.handleQuery()
-      }
+    openBrowser(variant) {
+      this.browserVariant = variant
+      this.browserVisible = true
     },
-
-    calculateSize(sv) {
-      if (sv.start && sv.end) {
-        return (sv.end - sv.start + 1).toLocaleString()
-      }
-      return 'N/A'
+    changePage(nextPage) {
+      if (nextPage < 1 || nextPage > this.totalPages) return
+      this.page = nextPage
+      this.runQuery(false)
     },
-
-    truncateSequence(sequence, maxLength = 20) {
-      if (!sequence) return 'N/A'
-      if (sequence.length <= maxLength) return sequence
-      return sequence.substring(0, maxLength) + '...'
+    changePageSize() {
+      this.page = 1
+      this.runQuery(false)
+    },
+    reset() {
+      this.query = { uniqueId: '', SVType: '', chromosome: '', start: null, end: null }
+      this.page = 1
+      this.size = 20
+      this.total = 0
+      this.results = []
+      this.selectedVariant = null
+      this.frequency = null
+      this.frequencyError = ''
+      this.error = ''
+      this.searched = false
+    },
+    formatPercent(value) {
+      return ((Number(value) || 0) * 100).toFixed(3) + '%'
+    },
+    formatInteger(value) {
+      return Number(value || 0).toLocaleString()
     }
   }
 }
 </script>
 
 <style scoped>
-.sv-query {
-  max-width: 1200px;
+.variant-query-page {
+  width: min(1500px, 100%);
   margin: 0 auto;
+  padding: 8px 20px 32px;
 }
-
-.query-form {
-  background: #f8f9fa;
-  padding: 30px;
-  border-radius: 10px;
-  margin-bottom: 30px;
+.query-card,
+.results-card {
+  border: 1px solid #dce3ec;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(32, 52, 84, 0.07);
 }
-
-.query-form h2 {
-  color: #2b4275;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.form-actions {
+.query-card { padding: 26px 28px; }
+.query-card-heading,
+.results-heading {
   display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-top: 25px;
-}
-
-label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-  color: #606266;
-}
-
-.form-input, .form-select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.form-input:focus, .form-select:focus {
-  outline: none;
-  border-color: var(--main-color);
-}
-
-.query-btn {
-  background-color: var(--main-color);
-  color: white;
-  padding: 12px 30px;
-  border: none;
-  border-radius: 6px;
-  font-size: 1.1rem;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.query-btn:hover:not(:disabled) {
-  background-color: #e67e00;
-}
-
-.query-btn:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.reset-btn {
-  background-color: #6c757d;
-  color: white;
-  padding: 12px 30px;
-  border: none;
-  border-radius: 6px;
-  font-size: 1.1rem;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.reset-btn:hover {
-  background-color: #5a6268;
-}
-
-.results-section {
-  margin-top: 30px;
-}
-
-.results-header {
-  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  gap: 20px;
+  margin-bottom: 22px;
 }
-
-.results-header h3 {
-  color: #2b4275;
-  margin: 0;
+.query-card-heading h2,
+.results-heading h3 { margin: 0 0 5px; color: #213a66; }
+.query-card-heading p,
+.results-heading p { margin: 0; color: #69798c; font-size: 0.9rem; }
+.assembly-badge {
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: #e6eef7;
+  color: #294f7d;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
-
-.results-info {
-  color: #606266;
-  font-weight: 500;
+.query-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr 0.75fr 1fr 1fr;
+  gap: 16px;
 }
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  margin: 20px 0;
-}
-
-.page-btn {
-  padding: 8px 16px;
-  border: 1px solid #dcdfe6;
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.page-btn:hover:not(:disabled) {
-  border-color: var(--main-color);
-  color: var(--main-color);
-}
-
-.page-btn:disabled {
-  color: #ccc;
-  cursor: not-allowed;
-}
-
-.page-info {
-  color: #606266;
-  font-weight: 500;
-}
-
-.results-table {
-  overflow-x: auto;
-  margin: 20px 0;
-}
-
-table {
+.form-group label { display: block; margin-bottom: 7px; color: #40536c; font-size: 0.88rem; font-weight: 700; }
+.form-control {
+  box-sizing: border-box;
   width: 100%;
-  border-collapse: collapse;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-th, td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-th {
-  background-color: #f5f7fa;
-  font-weight: 600;
-  color: #2b4275;
-  position: sticky;
-  top: 0;
-}
-
-tr:hover {
-  background-color: #f5f7fa;
-}
-
-.sv-type {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.sv-type.del {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-.sv-type.dup {
-  background-color: #e8f5e8;
-  color: #2e7d32;
-}
-
-.sv-type.ins {
-  background-color: #e3f2fd;
-  color: #1565c0;
-}
-
-.sv-type.inv {
-  background-color: #f3e5f5;
-  color: #7b1fa2;
-}
-
-.sv-type.bnd {
-  background-color: #fff3e0;
-  color: #ef6c00;
-}
-
-.sequence-cell {
-  max-width: 200px;
-  word-break: break-all;
-}
-
-.no-results {
-  text-align: center;
-  padding: 40px;
-  color: #606266;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.error-message {
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 15px;
+  height: 43px;
+  padding: 0 12px;
+  border: 1px solid #bac6d4;
   border-radius: 6px;
-  margin-top: 20px;
-  border: 1px solid #f5c6cb;
+  background: #fff;
+  color: #26384f;
+  font: inherit;
 }
+.form-control:focus { outline: 0; border-color: #315f93; box-shadow: 0 0 0 3px rgba(49, 95, 147, 0.12); }
+.query-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.primary-button,
+.secondary-button,
+.pagination button,
+.row-actions button {
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.primary-button,
+.secondary-button { min-width: 124px; padding: 11px 20px; font-size: 0.95rem; }
+.primary-button { background: #294f7d; }
+.primary-button:hover:not(:disabled) { background: #1f4069; }
+.secondary-button { background: #66788d; }
+.secondary-button:hover:not(:disabled) { background: #52657b; }
+button:disabled { opacity: 0.38; cursor: not-allowed; }
+.loading-state,
+.map-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 34px; color: #617287; }
+.loading-state span,
+.map-loading span { width: 20px; height: 20px; border: 3px solid #dce4ed; border-top-color: #315f93; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.status-message { margin: 18px 0; padding: 13px 15px; border-radius: 7px; }
+.error-message { border: 1px solid #efc4ca; background: #fff1f2; color: #a42e3e; }
+.warning-message { border: 1px solid #ebd19d; background: #fff8e8; color: #795515; }
+.results-card { margin-top: 24px; overflow: hidden; }
+.results-heading { align-items: center; margin: 0; padding: 20px 22px; border-bottom: 1px solid #e0e6ed; }
+.page-size-control { display: inline-flex; align-items: center; gap: 8px; color: #607187; font-size: 0.85rem; }
+.page-size-control select { padding: 6px 8px; border: 1px solid #b9c5d3; border-radius: 5px; background: #fff; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; min-width: 1320px; border-collapse: collapse; table-layout: auto; }
+th,
+td { padding: 13px 14px; border-bottom: 1px solid #e3e8ee; text-align: left; white-space: nowrap; font-size: 0.86rem; }
+th { background: #f3f6f9; color: #29435f; font-weight: 700; }
+tbody tr { transition: background 0.15s ease; }
+tbody tr:hover { background: #f1f6fb; }
+tbody tr.selected { background: #e7f0f9; box-shadow: inset 4px 0 #315f93; }
+.identifier { color: #255e9a; font-weight: 700; }
+.source-id { max-width: 220px; overflow: hidden; text-overflow: ellipsis; color: #5d6e83; }
+.type-badge { display: inline-block; min-width: 38px; padding: 3px 7px; border-radius: 4px; text-align: center; font-weight: 800; }
+.type-badge.del { background: #fde5e7; color: #ad2838; }
+.type-badge.dup { background: #e1f4e8; color: #23724c; }
+.type-badge.ins { background: #e3eef9; color: #225f94; }
+.type-badge.inv { background: #eee5f6; color: #674381; }
+.actions-column { min-width: 220px; }
+.row-actions { display: flex; gap: 7px; }
+.row-actions button { padding: 7px 10px; font-size: 0.78rem; }
+.frequency-button { background: #2f6e9f; }
+.frequency-button:hover:not(:disabled) { background: #24587f; }
+.browser-button { background: #72558d; }
+.browser-button:hover { background: #5d4475; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 18px; }
+.pagination button { min-width: 92px; padding: 8px 13px; background: #405e80; }
+.pagination span { color: #586a80; font-size: 0.87rem; font-weight: 600; }
+.empty-state { margin-top: 24px; padding: 44px; border: 1px dashed #c7d1dd; border-radius: 10px; background: #f8fafc; color: #68798d; text-align: center; }
 
-@media (max-width: 768px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .results-header {
-    flex-direction: column;
-    gap: 10px;
-    align-items: flex-start;
-  }
-  
-  .pagination {
-    flex-direction: column;
-    gap: 10px;
-  }
+@media (max-width: 1120px) {
+  .query-grid { grid-template-columns: repeat(2, 1fr); }
+  .id-field { grid-column: span 2; }
+}
+@media (max-width: 700px) {
+  .variant-query-page { padding-inline: 10px; }
+  .query-grid { grid-template-columns: 1fr; }
+  .id-field { grid-column: auto; }
+  .query-card-heading,
+  .results-heading { align-items: flex-start; flex-direction: column; }
+  .query-actions { justify-content: stretch; }
+  .query-actions button { flex: 1; }
 }
 </style>
