@@ -192,6 +192,11 @@ export default {
         alleleLine
       ].join('')
     },
+    hideTooltip() {
+      if (this.chart) {
+        this.chart.dispatchAction({ type: 'hideTip' })
+      }
+    },
     handleResize() {
       if (!this.chart) return
       this.chart.resize()

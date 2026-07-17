@@ -40,7 +40,7 @@
 
     <template v-if="searched && !loading">
       <div v-if="frequencyLoading" class="map-loading"><span></span>Loading population frequencies…</div>
-      <FrequencyMap v-else-if="frequency" :frequency="frequency" />
+      <FrequencyMap v-else-if="frequency" ref="frequencyMap" :frequency="frequency" />
       <div v-else-if="frequencyError" class="status-message warning-message">{{ frequencyError }}</div>
 
       <section v-if="results.length" class="results-card">
@@ -209,6 +209,7 @@ export default {
       }
     },
     openBrowser(variant) {
+      if (this.$refs.frequencyMap) this.$refs.frequencyMap.hideTooltip()
       this.browserVariant = variant
       this.browserVisible = true
     },
