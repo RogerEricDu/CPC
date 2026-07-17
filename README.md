@@ -1,5 +1,13 @@
 # cpc
 
+## CPC deployment modes
+
+- Development site: `npm run build:cpc-dev` (`/cpc-dev/`, API `/cpc-dev-api`).
+- Production site: `npm run build:cpc-prod` (`/cpc/`, API `/cpc-api`).
+- Imputation frontend handoff: `docs/imputation-online-v2.md`.
+
+Never publish a cpc-dev build under the production `/cpc` link.
+
 ## Project setup
 ```
 npm install

@@ -58,3 +58,22 @@ export function sendUserEmail(id, data) {
     data
   })
 }
+
+export function getImputationAccessRequests(params) {
+  return request({
+    url: '/admin/imputation/access-requests',
+    method: 'get',
+    params
+  })
+}
+
+export function decideImputationAccessRequest(id, decision, reviewNote) {
+  return request({
+    url: `/admin/imputation/access-requests/${encodeURIComponent(id)}/decision`,
+    method: 'post',
+    data: {
+      decision,
+      note: reviewNote || ''
+    }
+  })
+}
