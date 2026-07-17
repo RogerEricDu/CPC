@@ -3,14 +3,21 @@
     <div class="admin-header">
       <div>
         <h1>Admin</h1>
-        <p v-if="activeView === 'accounts'">Manage user access, approvals, and account status.</p>
+        <p>{{ activeDescription }}</p>
       </div>
       <button class="btn btn-primary" type="button" @click="refreshActive">Refresh</button>
     </div>
 
     <nav class="admin-tabs" aria-label="Admin sections">
-      <button :class="{ active: activeView === 'accounts' }" type="button" @click="activeView = 'accounts'">Account management</button>
-      <button :class="{ active: activeView === 'analytics' }" type="button" @click="activeView = 'analytics'">Visit analytics</button>
+      <button :class="{ active: activeView === 'accounts' }" type="button" @click="selectView('accounts')">
+        <i class="el-icon-user"></i> Account management
+      </button>
+      <button :class="{ active: activeView === 'analytics' }" type="button" @click="selectView('analytics')">
+        <i class="el-icon-data-analysis"></i> Visit analytics
+      </button>
+      <button :class="{ active: activeView === 'imputation' }" type="button" @click="selectView('imputation')">
+        <i class="el-icon-cpu"></i> Imputation access
+      </button>
     </nav>
 
     <section v-if="activeView === 'accounts'">
@@ -165,6 +172,7 @@
     </div>
     </section>
 
+    <ImputationAccessReview v-else-if="activeView === 'imputation'" ref="imputationReview" />
     <VisitAnalytics v-else ref="visitAnalytics" />
 
     <div v-if="emailDialog.open" class="dialog-backdrop" @click.self="closeEmail">
@@ -221,13 +229,15 @@ import {
   setUserAccessLevel
 } from '@/api/admin'
 import VisitAnalytics from './VisitAnalytics.vue'
+import ImputationAccessReview from './ImputationAccessReview.vue'
 
 export default {
   name: 'AdminPage',
-  components: { VisitAnalytics },
+  components: { ImputationAccessReview, VisitAnalytics },
   data() {
+    const requestedView = String(this.$route.query.section || '').toLowerCase()
     return {
-      activeView: 'accounts',
+      activeView: ['imputation', 'analytics'].includes(requestedView) ? requestedView : 'accounts',
       users: [],
       total: 0,
       page: 1,
@@ -251,6 +261,13 @@ export default {
     }
   },
   computed: {
+    activeDescription() {
+      return {
+        accounts: 'Manage user access, approvals, email communication, and account status.',
+        imputation: 'Review access requests for the managed Imputation compute service.',
+        analytics: 'Review CPC Data Portal traffic and usage analytics.'
+      }[this.activeView]
+    },
     pageCount() {
       return Math.max(1, Math.ceil(this.total / this.size))
     }
@@ -259,9 +276,23 @@ export default {
     this.loadUsers()
   },
   methods: {
+    selectView(view) {
+      if (!['accounts', 'imputation', 'analytics'].includes(view) || this.activeView === view) return
+      this.activeView = view
+      const query = { ...this.$route.query }
+      if (view === 'accounts') {
+        delete query.section
+      } else {
+        query.section = view
+      }
+      this.$router.replace({ path: this.$route.path, query }).catch(() => {})
+    },
     refreshActive() {
       if (this.activeView === 'analytics') {
         return this.$refs.visitAnalytics && this.$refs.visitAnalytics.refresh()
+      }
+      if (this.activeView === 'imputation') {
+        return this.$refs.imputationReview && this.$refs.imputationReview.loadRequests()
       }
       return this.loadUsers()
     },
@@ -418,6 +449,9 @@ export default {
 }
 
 .admin-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 38px;
   padding: 7px 16px;
   border: 0;

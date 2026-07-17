@@ -1,41 +1,73 @@
-import axios from 'axios'
 import request from '@/utils/request'
-import { getToken } from '@/utils/auth'
 
-export function uploadImputation(formData) {
+export function getImputationAccess() {
   return request({
-    url: '/imputation/upload',
+    url: '/imputation/access',
+    method: 'get'
+  })
+}
+
+export function requestImputationAccess(data) {
+  return request({
+    url: '/imputation/access/requests',
+    method: 'post',
+    data
+  })
+}
+
+export function getImputationOptions() {
+  return request({
+    url: '/imputation/options',
+    method: 'get'
+  })
+}
+
+export function createImputationTask(formData, onUploadProgress) {
+  return request({
+    url: '/imputation/tasks',
     method: 'post',
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data'
     },
-    timeout: 120000
+    onUploadProgress,
+    // Uploads can be large and are additionally constrained by the server.
+    timeout: 30 * 60 * 1000
   })
 }
 
-export function getImputationStatus(taskId) {
+export function getImputationTasks(params) {
   return request({
-    url: `/imputation/status/${taskId}`,
+    url: '/imputation/tasks',
+    method: 'get',
+    params
+  })
+}
+
+export function getImputationTask(taskId) {
+  return request({
+    url: `/imputation/tasks/${encodeURIComponent(taskId)}`,
     method: 'get'
   })
 }
 
-export async function downloadImputationResult(taskId, filename) {
-  const baseURL = process.env.VUE_APP_BASE_API || '/api'
-  const response = await axios.get(`${baseURL}/imputation/download/${taskId}`, {
-    responseType: 'blob',
-    headers: {
-      Authorization: `Bearer ${getToken()}`
-    }
+export function cancelImputationTask(taskId) {
+  return request({
+    url: `/imputation/tasks/${encodeURIComponent(taskId)}/cancel`,
+    method: 'post'
   })
-  const blobUrl = window.URL.createObjectURL(new Blob([response.data]))
-  const link = document.createElement('a')
-  link.href = blobUrl
-  link.download = filename || `imputation_result_${taskId}.vcf.gz`
-  link.style.display = 'none'
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(blobUrl)
+}
+
+export function retryImputationTask(taskId) {
+  return request({
+    url: `/imputation/tasks/${encodeURIComponent(taskId)}/retry`,
+    method: 'post'
+  })
+}
+
+export function createImputationDownloadTicket(taskId) {
+  return request({
+    url: `/imputation/tasks/${encodeURIComponent(taskId)}/download-ticket`,
+    method: 'post'
+  })
 }

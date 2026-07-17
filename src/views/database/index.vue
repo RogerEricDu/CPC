@@ -75,7 +75,8 @@
       <div v-if="!canUseDatabase" class="login-required">
         <div class="lock-icon">🔒</div>
         <h3>Please log in to use the database tools.</h3>
-        <button @click="$router.push('/login?redirect=/database')">Login</button>
+        <p>Database tools are available after login with BASIC access.</p>
+        <button @click="goToLogin">Login</button>
       </div>
       <template v-else>
         <SNPQuery v-if="activeTab === 'snp'" />
@@ -94,8 +95,10 @@ import ImputationTool from './ImputationTool.vue'
 import Pangraph from './Pangraph.vue';
 import { getCurrentUser, hasBasicAccess } from '@/utils/auth'
 
+const DATABASE_TABS = ['snp', 'sv', 'imputation', 'pangraph']
+
 export default {
-  name: 'Database',
+  name: 'DatabasePortal',
   components: {
     SNPQuery,
     SVQuery,
@@ -103,8 +106,15 @@ export default {
     Pangraph
   },
   data() {
+    const queryTab = String(this.$route.query.tab || '').toLowerCase()
+    let rememberedTab = ''
+    try {
+      rememberedTab = window.sessionStorage.getItem('cpc_database_active_tab') || ''
+    } catch (e) {
+      rememberedTab = ''
+    }
     return {
-      activeTab: 'snp',
+      activeTab: DATABASE_TABS.includes(queryTab) ? queryTab : (DATABASE_TABS.includes(rememberedTab) ? rememberedTab : 'snp'),
       currentUser: getCurrentUser()
     }
   },
@@ -115,6 +125,7 @@ export default {
   },
   mounted() {
     window.addEventListener('cpc-auth-changed', this.refreshUser)
+    this.persistTab(this.activeTab)
   },
   beforeDestroy() {
     window.removeEventListener('cpc-auth-changed', this.refreshUser)
@@ -124,9 +135,37 @@ export default {
       this.currentUser = getCurrentUser()
     },
     selectTab(tab) {
+      if (!DATABASE_TABS.includes(tab)) return
       this.activeTab = tab
-      if (!this.canUseDatabase) {
-        return
+      this.persistTab(tab)
+    },
+    persistTab(tab) {
+      try {
+        window.sessionStorage.setItem('cpc_database_active_tab', tab)
+      } catch (e) {
+        // Query state still keeps deep links stable when storage is disabled.
+      }
+      if (this.$route.query.tab === tab) return
+      this.$router.replace({
+        path: this.$route.path,
+        query: { ...this.$route.query, tab }
+      }).catch(() => {})
+    },
+    goToLogin() {
+      const redirect = this.$router.resolve({ path: '/database', query: { tab: this.activeTab } }).route.fullPath
+      this.$router.push({ path: '/login', query: { redirect } })
+    }
+  },
+  watch: {
+    '$route.query.tab'(value) {
+      const tab = String(value || '').toLowerCase()
+      if (DATABASE_TABS.includes(tab) && tab !== this.activeTab) {
+        this.activeTab = tab
+        try {
+          window.sessionStorage.setItem('cpc_database_active_tab', tab)
+        } catch (e) {
+          // No action needed.
+        }
       }
     }
   }
