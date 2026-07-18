@@ -35,8 +35,7 @@ export default {
   },
   data() {
     return {
-      chart: null,
-      renderFrame: null
+      chart: null
     }
   },
   watch: {
@@ -53,15 +52,16 @@ export default {
       mapRegistered = true
     }
     this.chart = echarts.init(this.$refs.chart)
-    this.chart.on('georoam', this.scheduleRingRender)
+    this.chart.on('mouseover', this.handleRingMouseOver)
+    this.chart.on('mouseout', this.handleRingMouseOut)
     window.addEventListener('resize', this.handleResize)
     this.renderChart()
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
-    if (this.renderFrame) cancelAnimationFrame(this.renderFrame)
     if (this.chart) {
-      this.chart.off('georoam', this.scheduleRingRender)
+      this.chart.off('mouseover', this.handleRingMouseOver)
+      this.chart.off('mouseout', this.handleRingMouseOut)
       this.chart.dispose()
     }
   },
@@ -74,8 +74,9 @@ export default {
     },
     renderChart() {
       if (!this.chart || !this.frequency || !Array.isArray(this.frequency.regions)) return
+      const regions = this.frequency.regions
       this.chart.setOption({
-        animationDuration: 350,
+        animation: false,
         tooltip: {
           trigger: 'item',
           confine: true,
@@ -101,63 +102,83 @@ export default {
           },
           select: { disabled: true }
         },
-        series: []
+        series: [
+          this.createRingSeries(regions),
+          this.createLabelSeries(regions)
+        ]
       }, true)
-      this.scheduleRingRender()
     },
-    scheduleRingRender() {
-      if (this.renderFrame) cancelAnimationFrame(this.renderFrame)
-      this.renderFrame = requestAnimationFrame(() => {
-        this.renderFrame = null
-        this.renderRings()
+    createRingSeries(regions) {
+      const data = []
+      regions.forEach(region => {
+        const total = Math.max(0, Number(region.totalAlleles) || 0)
+        const variant = Math.max(0, Math.min(total, Number(region.variantAlleles) || 0))
+        const segments = [
+          { name: 'Variant allele', value: variant, color: '#d1495b' },
+          { name: 'Reference allele', value: Math.max(0, total - variant), color: '#dbe4ee' }
+        ]
+        let startAngle = -Math.PI / 2
+        segments.forEach(segment => {
+          if (segment.value <= 0 || total <= 0) return
+          const endAngle = startAngle + (segment.value / total) * Math.PI * 2
+          data.push({
+            name: segment.name,
+            value: [region.longitude, region.latitude, segment.value, startAngle, endAngle],
+            segmentValue: segment.value,
+            color: segment.color,
+            region
+          })
+          startAngle = endAngle
+        })
       })
-    },
-    renderRings() {
-      if (!this.chart) return
-      const regions = this.frequency.regions || []
-      const pies = regions.map((region, index) => {
-        const center = this.chart.convertToPixel({ geoIndex: 0 }, [region.longitude, region.latitude])
-        return {
-          id: `frequency-ring-${region.code}`,
-          name: region.label,
-          type: 'pie',
-          center,
-          radius: [15, 25],
-          z: 12 + index,
-          silent: false,
-          avoidLabelOverlap: true,
-          label: { show: false },
-          labelLine: { show: false },
-          emphasis: {
-            scale: true,
-            scaleSize: 8,
-            itemStyle: {
-              shadowBlur: 14,
-              shadowColor: 'rgba(25, 48, 82, 0.35)'
-            }
-          },
-          data: [
-            {
-              name: 'Variant allele',
-              value: region.variantAlleles,
-              region,
-              itemStyle: { color: '#d1495b', borderColor: '#fff', borderWidth: 1 }
+      return {
+        id: 'frequency-rings',
+        name: 'Population frequencies',
+        type: 'custom',
+        coordinateSystem: 'geo',
+        z: 12,
+        silent: false,
+        progressive: 0,
+        clip: false,
+        renderItem: (params, api) => {
+          const item = data[params.dataIndex]
+          const center = api.coord([api.value(0), api.value(1)])
+          if (!center || !Number.isFinite(center[0]) || !Number.isFinite(center[1])) return null
+          return {
+            type: 'sector',
+            shape: {
+              cx: center[0],
+              cy: center[1],
+              r: 25,
+              r0: 15,
+              startAngle: api.value(3),
+              endAngle: api.value(4),
+              clockwise: true
             },
-            {
-              name: 'Reference allele',
-              value: Math.max(0, region.totalAlleles - region.variantAlleles),
-              region,
-              itemStyle: { color: '#dbe4ee', borderColor: '#fff', borderWidth: 1 }
+            style: {
+              fill: item.color,
+              stroke: '#fff',
+              lineWidth: 1
+            },
+            emphasis: {
+              style: {
+                shadowBlur: 14,
+                shadowColor: 'rgba(25, 48, 82, 0.35)'
+              }
             }
-          ]
-        }
-      })
-      const labels = {
+          }
+        },
+        data
+      }
+    },
+    createLabelSeries(regions) {
+      return {
         id: 'frequency-region-labels',
         name: 'Regions',
         type: 'scatter',
         coordinateSystem: 'geo',
         z: 30,
+        silent: true,
         symbolSize: 2,
         itemStyle: { opacity: 0 },
         label: {
@@ -176,13 +197,12 @@ export default {
           region
         }))
       }
-      this.chart.setOption({ series: [...pies, labels] }, { replaceMerge: ['series'], lazyUpdate: true })
     },
     tooltipContent(params) {
       const region = params.data && params.data.region
       if (!region) return params.name || ''
-      const alleleLine = params.seriesType === 'pie'
-        ? `<br>${params.name}: ${this.formatInteger(params.value)}`
+      const alleleLine = params.seriesType === 'custom' && params.data.segmentValue !== undefined
+        ? `<br>${params.name}: ${this.formatInteger(params.data.segmentValue)}`
         : ''
       return [
         `<strong>${region.label}</strong>`,
@@ -192,6 +212,22 @@ export default {
         alleleLine
       ].join('')
     },
+    handleRingMouseOver(params) {
+      if (!params || params.seriesId !== 'frequency-rings') return
+      this.animateRing(params.event && params.event.target, 33)
+    },
+    handleRingMouseOut(params) {
+      if (!params || params.seriesId !== 'frequency-rings') return
+      this.animateRing(params.event && params.event.target, 25)
+    },
+    animateRing(target, radius) {
+      if (!target || !target.shape || !Number.isFinite(target.shape.r)) return
+      target.stopAnimation()
+      target.animateTo(
+        { shape: { ...target.shape, r: radius } },
+        { duration: 120, easing: 'cubicOut' }
+      )
+    },
     hideTooltip() {
       if (this.chart) {
         this.chart.dispatchAction({ type: 'hideTip' })
@@ -200,7 +236,6 @@ export default {
     handleResize() {
       if (!this.chart) return
       this.chart.resize()
-      this.scheduleRingRender()
     }
   }
 }

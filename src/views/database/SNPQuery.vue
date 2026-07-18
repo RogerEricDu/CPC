@@ -1,110 +1,158 @@
 <template>
-  <div class="variant-query-page">
-    <section class="query-card">
-      <div class="query-card-heading">
-        <div>
-          <h2>SNP query</h2>
-          <p>Search indexed single-nucleotide variants by identifier or genomic position.</p>
-        </div>
-        <span class="assembly-badge">GRCh38</span>
+  <div class="snp-query">
+    <div class="query-form">
+      <div class="form-group">
+        <label for="rsId">SNP ID (rsID):</label>
+        <input
+          type="text"
+          id="rsId"
+          v-model="rsId"
+          placeholder="e.g., rs123456"
+          class="form-input"
+        >
       </div>
 
-      <div class="query-grid">
+      <div class="form-group">
+        <label for="chromosome">Chromosome:</label>
+        <select id="chromosome" v-model="chromosome" class="form-select">
+          <option value="">Select Chromosome</option>
+          <option v-for="chr in chromosomes" :key="chr" :value="chr">
+            {{ chr }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-row">
         <div class="form-group">
-          <label for="snp-id">SNP ID</label>
-          <input id="snp-id" v-model.trim="query.rsId" class="form-control" type="text" placeholder="e.g. rs1204610256">
+          <label for="position">Position:</label>
+          <input
+            type="number"
+            id="position"
+            v-model.number="position"
+            placeholder="Genomic position"
+            class="form-input"
+            min="1"
+          >
         </div>
+
         <div class="form-group">
-          <label for="snp-chromosome">Chromosome</label>
-          <select id="snp-chromosome" v-model="query.chromosome" class="form-control">
-            <option value="">All available chromosomes</option>
-            <option v-for="chromosome in chromosomes" :key="chromosome" :value="chromosome">chr{{ chromosome }}</option>
+          <label for="population">Population:</label>
+          <select id="population" v-model="population" class="form-select">
+            <option value="">All Populations</option>
+            <option value="han">Han Chinese</option>
+            <option value="zang">Tibetan</option>
+            <option value="miao">Miao</option>
+            <option value="mongolian">Mongolian</option>
           </select>
         </div>
+      </div>
+
+      <div class="form-row">
         <div class="form-group">
-          <label for="snp-position">Position</label>
-          <input id="snp-position" v-model.number="query.position" class="form-control" type="number" min="1" placeholder="Genomic coordinate">
+          <label for="page">Page:</label>
+          <input
+            type="number"
+            id="page"
+            v-model.number="page"
+            placeholder="Page number"
+            class="form-input"
+            min="1"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="size">Page Size:</label>
+          <select id="size" v-model="size" class="form-select">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
         </div>
       </div>
 
-      <div class="query-actions">
-        <button type="button" class="secondary-button" :disabled="loading" @click="reset">Reset</button>
-        <button type="button" class="primary-button" :disabled="loading" @click="runQuery(true)">
-          {{ loading ? 'Searching…' : 'Search SNPs' }}
+      <div class="form-actions">
+        <button @click="handleReset" class="reset-btn" :disabled="loading">
+          Reset
+        </button>
+        <button @click="handleQuery" class="query-btn" :disabled="loading">
+          {{ loading ? 'Querying...' : 'Query SNP' }}
         </button>
       </div>
-    </section>
+    </div>
 
-    <div v-if="error" class="status-message error-message">{{ error }}</div>
-    <div v-if="loading" class="loading-state"><span></span>Searching indexed variants…</div>
+    <div v-if="loading" class="loading">
+      <div class="spinner"></div>
+      <span>Loading data...</span>
+    </div>
+
+    <div v-if="errorMessage" class="error-message">
+      {{ errorMessage }}
+    </div>
 
     <template v-if="searched && !loading">
-      <div v-if="frequencyLoading" class="map-loading"><span></span>Loading population frequencies…</div>
+      <div v-if="frequencyLoading" class="loading">
+        <div class="spinner"></div>
+        <span>Loading population frequencies...</span>
+      </div>
       <FrequencyMap v-else-if="frequency" ref="frequencyMap" :frequency="frequency" />
-      <div v-else-if="frequencyError" class="status-message warning-message">{{ frequencyError }}</div>
+      <div v-else-if="frequencyError" class="warning-message">{{ frequencyError }}</div>
 
-      <section v-if="results.length" class="results-card">
-        <div class="results-heading">
-          <div>
-            <h3>Query results</h3>
-            <p>{{ formatInteger(total) }} variants · Page {{ page }} of {{ totalPages }}</p>
-          </div>
-          <label class="page-size-control">
-            Rows
-            <select v-model.number="size" @change="changePageSize">
-              <option :value="10">10</option>
-              <option :value="20">20</option>
-              <option :value="50">50</option>
-              <option :value="100">100</option>
-            </select>
-          </label>
+      <div v-if="results && results.length > 0" class="results-section">
+        <div class="results-header">
+          <h3>Query Results (Total: {{ total }})</h3>
+          <div class="pagination-info">Page {{ page }} of {{ totalPages }}</div>
         </div>
 
-        <div class="table-wrap">
+        <div class="results-table">
           <table>
             <thead>
               <tr>
                 <th>SNP ID</th>
-                <th>Locus</th>
-                <th>Reference</th>
-                <th>Alternate</th>
-                <th>Reference frequency</th>
-                <th>Alternate frequency</th>
-                <th>Allele count</th>
-                <th class="actions-column">Actions</th>
+                <th>Chromosome</th>
+                <th>Position</th>
+                <th>Ref Allele</th>
+                <th>Alt Allele</th>
+                <th>Ref Frequency</th>
+                <th>Alt Frequency</th>
+                <th>Allele Count</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="variant in results"
-                :key="variant.chromosome + ':' + variant.position + ':' + variant.rsId"
-                :class="{ selected: selectedVariant && selectedVariant.rsId === variant.rsId && selectedVariant.position === variant.position }"
-                @click="selectVariant(variant)"
+                v-for="result in results"
+                :key="result.chromosome + ':' + result.position + ':' + result.rsId"
+                :class="{ selected: isSelected(result) }"
+                @click="selectVariant(result)"
               >
-                <td class="identifier">{{ variant.rsId }}</td>
-                <td>{{ variant.chromosome }}:{{ formatInteger(variant.position) }}</td>
-                <td>{{ variant.refAllele }}</td>
-                <td>{{ variant.altAllele }}</td>
-                <td>{{ formatPercent(variant.refFrequency) }}</td>
-                <td>{{ formatPercent(variant.altFrequency) }}</td>
-                <td>{{ formatInteger(variant.alleleCount) }} / {{ formatInteger(variant.alleleNumber) }}</td>
+                <td class="identifier">{{ result.rsId || 'N/A' }}</td>
+                <td>{{ result.chromosome || 'N/A' }}</td>
+                <td>{{ formatInteger(result.position) }}</td>
+                <td>{{ result.refAllele || 'N/A' }}</td>
+                <td>{{ result.altAllele || 'N/A' }}</td>
+                <td>{{ formatPercent(result.refFrequency) }}</td>
+                <td>{{ formatPercent(result.altFrequency) }}</td>
+                <td>{{ formatInteger(result.alleleCount) }} / {{ formatInteger(result.alleleNumber) }}</td>
                 <td class="row-actions" @click.stop>
-                  <button type="button" class="frequency-button" @click="selectVariant(variant)">Frequency</button>
-                  <button type="button" class="browser-button" @click="openBrowser(variant)">Genome browser</button>
+                  <button type="button" class="frequency-btn" @click="selectVariant(result)">Frequency</button>
+                  <button type="button" class="browser-btn" @click="openBrowser(result)">Genome browser</button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div class="pagination">
-          <button type="button" :disabled="page <= 1 || loading" @click="changePage(page - 1)">Previous</button>
-          <span>Page {{ page }} / {{ totalPages }}</span>
-          <button type="button" :disabled="page >= totalPages || loading" @click="changePage(page + 1)">Next</button>
+        <div v-if="total > Number(size)" class="pagination">
+          <button @click="prevPage" :disabled="page <= 1" class="page-btn">Previous</button>
+          <span class="page-info">Page {{ page }}</span>
+          <button @click="nextPage" :disabled="page >= totalPages" class="page-btn">Next</button>
         </div>
-      </section>
+      </div>
 
-      <div v-else class="empty-state">No SNPs matched the query.</div>
+      <div v-else class="no-results">
+        No SNPs found matching your criteria.
+      </div>
     </template>
 
     <GenomeBrowserModal
@@ -117,7 +165,7 @@
 </template>
 
 <script>
-import { getSnpFrequency, searchSNP } from '@/api/variant'
+import { getSnpFrequency, searchSNP } from '@/api/variant.js'
 import FrequencyMap from '@/components/variant/FrequencyMap.vue'
 import GenomeBrowserModal from '@/components/variant/GenomeBrowserModal.vue'
 
@@ -126,53 +174,72 @@ export default {
   components: { FrequencyMap, GenomeBrowserModal },
   data() {
     return {
-      query: {
-        rsId: '',
-        chromosome: '',
-        position: null
-      },
-      chromosomes: ['21', '22'],
+      rsId: '',
+      chromosome: '',
+      position: null,
+      population: '',
       page: 1,
-      size: 20,
+      size: 10,
+      results: null,
       total: 0,
-      results: [],
+      loading: false,
+      errorMessage: '',
+      searched: false,
+      chromosomes: Array.from({ length: 22 }, (_, index) => (index + 1).toString()).concat(['X', 'Y', 'M']),
       selectedVariant: null,
       frequency: null,
       frequencyLoading: false,
       frequencyError: '',
       frequencyRequestId: 0,
-      loading: false,
-      searched: false,
-      error: '',
       browserVisible: false,
       browserVariant: null
     }
   },
   computed: {
     totalPages() {
-      return Math.max(1, Math.ceil(this.total / this.size))
+      return Math.max(1, Math.ceil(this.total / Number(this.size || 10)))
     }
   },
   methods: {
-    async runQuery(resetPage) {
+    hasSearchCriteria() {
+      return Boolean(this.rsId.trim() || this.chromosome || this.position)
+    },
+    clearQueryOutput() {
+      this.frequencyRequestId++
+      this.results = null
+      this.total = 0
+      this.selectedVariant = null
+      this.frequency = null
+      this.frequencyLoading = false
+      this.frequencyError = ''
+      this.errorMessage = ''
+      this.searched = false
+    },
+    async handleQuery() {
       if (this.loading) return
-      if (resetPage) this.page = 1
+      if (!this.hasSearchCriteria()) {
+        this.clearQueryOutput()
+        return
+      }
+
       this.loading = true
-      this.error = ''
+      this.errorMessage = ''
       this.frequency = null
       this.frequencyError = ''
       this.searched = true
+
       try {
         const response = await searchSNP({
-          rsId: this.query.rsId || null,
-          chromosome: this.query.chromosome || null,
-          position: this.query.position || null,
+          rsId: this.rsId.trim() || null,
+          chromosome: this.chromosome || null,
+          position: this.position || null,
+          population: this.population || null,
           page: this.page,
-          size: this.size
+          size: Number(this.size)
         })
         this.results = response.data || []
         this.total = Number(response.total || 0)
-        if (this.results.length) {
+        if (this.results.length > 0) {
           await this.selectVariant(this.results[0])
         } else {
           this.selectedVariant = null
@@ -181,7 +248,7 @@ export default {
         this.results = []
         this.total = 0
         this.selectedVariant = null
-        this.error = (error.response && error.response.data && error.response.data.message) || 'Unable to search SNP data.'
+        this.errorMessage = (error.response && error.response.data && error.response.data.message) || 'Failed to query SNP data.'
       } finally {
         this.loading = false
       }
@@ -208,34 +275,37 @@ export default {
         if (requestId === this.frequencyRequestId) this.frequencyLoading = false
       }
     },
+    isSelected(variant) {
+      return Boolean(this.selectedVariant && this.selectedVariant.rsId === variant.rsId && this.selectedVariant.position === variant.position)
+    },
     openBrowser(variant) {
       if (this.$refs.frequencyMap) this.$refs.frequencyMap.hideTooltip()
       this.browserVariant = variant
       this.browserVisible = true
     },
-    changePage(nextPage) {
-      if (nextPage < 1 || nextPage > this.totalPages) return
-      this.page = nextPage
-      this.runQuery(false)
-    },
-    changePageSize() {
+    handleReset() {
+      this.rsId = ''
+      this.chromosome = ''
+      this.position = null
+      this.population = ''
       this.page = 1
-      this.runQuery(false)
+      this.size = 10
+      this.clearQueryOutput()
     },
-    reset() {
-      this.query = { rsId: '', chromosome: '', position: null }
-      this.page = 1
-      this.size = 20
-      this.total = 0
-      this.results = []
-      this.selectedVariant = null
-      this.frequency = null
-      this.frequencyError = ''
-      this.error = ''
-      this.searched = false
+    prevPage() {
+      if (this.page > 1) {
+        this.page--
+        this.handleQuery()
+      }
+    },
+    nextPage() {
+      if (this.page < this.totalPages) {
+        this.page++
+        this.handleQuery()
+      }
     },
     formatPercent(value) {
-      return ((Number(value) || 0) * 100).toFixed(3) + '%'
+      return `${((Number(value) || 0) * 100).toFixed(3)}%`
     },
     formatInteger(value) {
       return Number(value || 0).toLocaleString()
@@ -245,119 +315,260 @@ export default {
 </script>
 
 <style scoped>
-.variant-query-page {
-  width: min(1500px, 100%);
+.snp-query {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 8px 20px 32px;
+  padding: 20px;
 }
 
-.query-card,
-.results-card {
-  border: 1px solid #dce3ec;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(32, 52, 84, 0.07);
+.query-form {
+  background: #f8f9fa;
+  padding: 30px;
+  border-radius: 10px;
+  margin-bottom: 30px;
 }
 
-.query-card { padding: 26px 28px; }
-.query-card-heading,
-.results-heading {
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-actions {
   display: flex;
-  align-items: flex-start;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #606266;
+}
+
+.form-input, .form-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.form-input:focus, .form-select:focus {
+  outline: none;
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+}
+
+.query-btn {
+  background-color: var(--main-color);
+  color: white;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.query-btn:hover:not(:disabled) {
+  background-color: #e67e00;
+}
+
+.query-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.reset-btn {
+  background-color: #909399;
+  color: white;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  min-width: 120px;
+}
+
+.reset-btn:hover:not(:disabled) {
+  background-color: #a6a9ad;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  color: #606266;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  background-color: #fef0f0;
+  color: #f56c6c;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #fde2e2;
+}
+
+.warning-message {
+  padding: 15px;
+  border: 1px solid #ebd19d;
+  border-radius: 4px;
+  background: #fff8e8;
+  color: #795515;
+}
+
+.results-section {
+  margin-top: 30px;
+}
+
+.results-header {
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 22px;
-}
-.query-card-heading h2,
-.results-heading h3 { margin: 0 0 5px; color: #213a66; }
-.query-card-heading p,
-.results-heading p { margin: 0; color: #69798c; font-size: 0.9rem; }
-.assembly-badge {
-  padding: 6px 11px;
-  border-radius: 999px;
-  background: #e6eef7;
-  color: #294f7d;
-  font-size: 0.8rem;
-  font-weight: 700;
 }
 
-.query-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr 1fr;
-  gap: 18px;
+.results-section h3 {
+  color: #2b4275;
+  margin-bottom: 15px;
 }
-.form-group label { display: block; margin-bottom: 7px; color: #40536c; font-size: 0.88rem; font-weight: 700; }
-.form-control {
-  box-sizing: border-box;
+
+.pagination-info {
+  color: #606266;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
+
+.results-table {
+  overflow-x: auto;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+table {
   width: 100%;
-  height: 43px;
-  padding: 0 12px;
-  border: 1px solid #bac6d4;
-  border-radius: 6px;
-  background: #fff;
-  color: #26384f;
-  font: inherit;
+  min-width: 1120px;
+  border-collapse: collapse;
+  background: white;
 }
-.form-control:focus { outline: 0; border-color: #315f93; box-shadow: 0 0 0 3px rgba(49, 95, 147, 0.12); }
-.query-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
-.primary-button,
-.secondary-button,
-.pagination button,
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e4e7ed;
+  white-space: nowrap;
+}
+
+th {
+  background-color: #f5f7fa;
+  font-weight: 600;
+  color: #2b4275;
+  position: sticky;
+  top: 0;
+}
+
+tr:hover {
+  background-color: #f5f7fa;
+}
+
+tr.selected {
+  background-color: #edf5ff;
+}
+
+.identifier {
+  color: #315f93;
+  font-weight: 600;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .row-actions button {
+  padding: 7px 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #fff;
-  font-weight: 700;
   cursor: pointer;
 }
-.primary-button,
-.secondary-button { min-width: 124px; padding: 11px 20px; font-size: 0.95rem; }
-.primary-button { background: #294f7d; }
-.primary-button:hover:not(:disabled) { background: #1f4069; }
-.secondary-button { background: #66788d; }
-.secondary-button:hover:not(:disabled) { background: #52657b; }
-button:disabled { opacity: 0.42; cursor: not-allowed; }
 
-.loading-state,
-.map-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 34px; color: #617287; }
-.loading-state span,
-.map-loading span { width: 20px; height: 20px; border: 3px solid #dce4ed; border-top-color: #315f93; border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.status-message { margin: 18px 0; padding: 13px 15px; border-radius: 7px; }
-.error-message { border: 1px solid #efc4ca; background: #fff1f2; color: #a42e3e; }
-.warning-message { border: 1px solid #ebd19d; background: #fff8e8; color: #795515; }
+.frequency-btn { background: #2f6e9f; }
+.frequency-btn:hover { background: #24587f; }
+.browser-btn { background: #72558d; }
+.browser-btn:hover { background: #5d4475; }
 
-.results-card { margin-top: 24px; overflow: hidden; }
-.results-heading { align-items: center; margin: 0; padding: 20px 22px; border-bottom: 1px solid #e0e6ed; }
-.page-size-control { display: inline-flex; align-items: center; gap: 8px; color: #607187; font-size: 0.85rem; }
-.page-size-control select { padding: 6px 8px; border: 1px solid #b9c5d3; border-radius: 5px; background: #fff; }
-.table-wrap { overflow-x: auto; }
-table { width: 100%; min-width: 1180px; border-collapse: collapse; table-layout: auto; }
-th,
-td { padding: 13px 14px; border-bottom: 1px solid #e3e8ee; text-align: left; white-space: nowrap; font-size: 0.88rem; }
-th { background: #f3f6f9; color: #29435f; font-weight: 700; }
-tbody tr { cursor: pointer; transition: background 0.15s ease; }
-tbody tr:hover { background: #f1f6fb; }
-tbody tr.selected { background: #e7f0f9; box-shadow: inset 4px 0 #315f93; }
-.identifier { color: #255e9a; font-weight: 700; }
-.actions-column { min-width: 220px; }
-.row-actions { display: flex; gap: 7px; }
-.row-actions button { padding: 7px 10px; font-size: 0.78rem; }
-.frequency-button { background: #2f6e9f; }
-.frequency-button:hover { background: #24587f; }
-.browser-button { background: #72558d; }
-.browser-button:hover { background: #5d4475; }
-.pagination { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 18px; }
-.pagination button { min-width: 92px; padding: 8px 13px; background: #405e80; }
-.pagination span { color: #586a80; font-size: 0.87rem; font-weight: 600; }
-.empty-state { margin-top: 24px; padding: 44px; border: 1px dashed #c7d1dd; border-radius: 10px; background: #f8fafc; color: #68798d; text-align: center; }
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 30px;
+}
 
-@media (max-width: 900px) {
-  .variant-query-page { padding-inline: 10px; }
-  .query-grid { grid-template-columns: 1fr; }
-  .query-card-heading,
-  .results-heading { align-items: flex-start; flex-direction: column; }
-  .query-actions { justify-content: stretch; }
-  .query-actions button { flex: 1; }
+.page-btn {
+  padding: 8px 16px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background-color: #66b1ff;
+}
+
+.page-btn:disabled {
+  background-color: #c0c4cc;
+  cursor: not-allowed;
+}
+
+.page-info {
+  color: #606266;
+  font-weight: 500;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  color: #909399;
+  font-size: 1.1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .form-row { grid-template-columns: 1fr; }
+  .results-header { align-items: flex-start; flex-direction: column; gap: 0; }
 }
 </style>
