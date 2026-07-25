@@ -50,6 +50,7 @@ export default {
   },
   beforeCreate() {
     this._jbrowseReactRoot = null
+    this._jbrowseViewState = null
   },
   data() {
     return {
@@ -65,11 +66,13 @@ export default {
       if (value) {
         this.previousBodyOverflow = document.body.style.overflow
         document.body.style.overflow = 'hidden'
+        document.body.classList.add('cpc-genome-browser-open')
         document.addEventListener('keydown', this.handleKeydown)
         this.loadBrowser()
       } else {
         this.loadRequestId++
         document.body.style.overflow = this.previousBodyOverflow
+        document.body.classList.remove('cpc-genome-browser-open')
         document.removeEventListener('keydown', this.handleKeydown)
         this.cleanupJBrowse()
       }
@@ -81,6 +84,7 @@ export default {
   beforeDestroy() {
     this.loadRequestId++
     document.body.style.overflow = this.previousBodyOverflow
+    document.body.classList.remove('cpc-genome-browser-open')
     document.removeEventListener('keydown', this.handleKeydown)
     this.cleanupJBrowse()
   },
@@ -116,21 +120,34 @@ export default {
     renderJBrowse() {
       const container = this.$refs.jbrowse
       if (!container || !this.browser) return
-      const viewState = createViewState(this.createJBrowseOptions(this.browser))
+      this._jbrowseViewState = createViewState(this.createJBrowseOptions(this.browser))
       this._jbrowseReactRoot = ReactDOM.createRoot(container)
-      this._jbrowseReactRoot.render(React.createElement(JBrowseLinearGenomeView, { viewState }))
+      this._jbrowseReactRoot.render(React.createElement(JBrowseLinearGenomeView, { viewState: this._jbrowseViewState }))
     },
     createJBrowseOptions(browser) {
       const key = this.safeId(`${this.kind}-${browser.selectedId}`)
       const assemblyName = browser.assembly
       const referenceTrackId = `${key}-reference`
-      const chromosomeLength = this.chromosomeLength(browser)
-      const chromSizes = `${browser.chromosome}\t${chromosomeLength}\n`
+      const assemblyLengths = CHROMOSOME_LENGTHS[assemblyName] || {
+        [browser.chromosome]: Math.max(browser.end + 1000000, 1000000)
+      }
+      const chromSizes = Object.entries(assemblyLengths)
+        .map(([chromosome, length]) => `${chromosome}\t${length}`)
+        .join('\n') + '\n'
       const chromSizesUri = `data:text/plain;charset=utf-8,${encodeURIComponent(chromSizes)}`
       const tracks = browser.tracks.map(track => this.createTrackConfig(track, browser, assemblyName, key))
+      const sessionTracks = tracks.map(track => ({
+        type: track.type,
+        configuration: track.trackId,
+        displays: track.displays.map(display => ({
+          type: display.type,
+          configuration: display.displayId
+        }))
+      }))
 
       const assembly = {
         name: assemblyName,
+        aliases: assemblyName === 'GRCh38' ? ['hg38'] : ['hs1', 'T2T-CHM13v2.0'],
         sequence: {
           type: 'ReferenceSequenceTrack',
           trackId: referenceTrackId,
@@ -147,6 +164,7 @@ export default {
       return {
         assembly,
         tracks,
+        location: `${browser.chromosome}:${browser.start}..${browser.end}`,
         disableAddTracks: true,
         configuration: {
           theme: {
@@ -154,7 +172,13 @@ export default {
               primary: { main: '#315f93' },
               secondary: { main: '#72558d' }
             },
-            typography: { fontSize: 13 }
+            typography: { fontSize: 13 },
+            zIndex: {
+              drawer: 5000,
+              modal: 5100,
+              snackbar: 5200,
+              tooltip: 5300
+            }
           }
         },
         defaultSession: {
@@ -162,11 +186,10 @@ export default {
           view: {
             id: `${key}-linear-view`,
             type: 'LinearGenomeView',
-            init: {
-              assembly: assemblyName,
-              loc: `${browser.chromosome}:${browser.start}..${browser.end}`,
-              tracks: tracks.map(track => track.trackId)
-            }
+            tracks: sessionTracks,
+            showCenterLine: true,
+            showGridlines: true,
+            trackLabels: 'offset'
           }
         }
       }
@@ -179,6 +202,7 @@ export default {
         type: quantitative ? 'QuantitativeTrack' : 'FeatureTrack',
         trackId,
         name: track.label,
+        category: ['CPC variant data'],
         assemblyNames: [assemblyName],
         adapter: {
           type: 'FromConfigAdapter',
@@ -211,10 +235,6 @@ export default {
         ...(feature.details || {})
       }
     },
-    chromosomeLength(browser) {
-      const assembly = CHROMOSOME_LENGTHS[browser.assembly] || {}
-      return assembly[browser.chromosome] || Math.max(browser.end + 1000000, 1000000)
-    },
     safeId(value) {
       return String(value || 'track').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'track'
     },
@@ -223,6 +243,7 @@ export default {
         this._jbrowseReactRoot.unmount()
         this._jbrowseReactRoot = null
       }
+      this._jbrowseViewState = null
       const container = this.$refs.jbrowse
       if (container) container.replaceChildren()
     },
@@ -340,5 +361,17 @@ export default {
   min-height: 0;
   overflow: auto;
   background: #fff;
+}
+</style>
+
+<style>
+body.cpc-genome-browser-open > .MuiModal-root,
+body.cpc-genome-browser-open > .MuiPopover-root {
+  z-index: 5100 !important;
+}
+
+body.cpc-genome-browser-open > .MuiPopper-root,
+body.cpc-genome-browser-open > .MuiTooltip-popper {
+  z-index: 5300 !important;
 }
 </style>

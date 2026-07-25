@@ -77,6 +77,9 @@
         <button @click="handleReset" class="reset-btn">
           Reset
         </button>
+        <button @click="handleViewAll" class="view-all-btn" :disabled="loading">
+          {{ loading && viewAllMode ? 'Loading...' : 'View all results' }}
+        </button>
         <button @click="handleQuery" :disabled="loading" class="query-btn">
           {{ loading ? 'Searching...' : 'Search SV' }}
         </button>
@@ -211,7 +214,8 @@ export default {
       frequencyError: '',
       frequencyRequestId: 0,
       browserVisible: false,
-      browserVariant: null
+      browserVariant: null,
+      viewAllMode: false
     }
   },
   computed: {
@@ -239,6 +243,7 @@ export default {
       this.frequencyError = ''
       this.error = null
       this.searched = false
+      this.viewAllMode = false
     },
     async handleQuery() {
       if (this.loading) return
@@ -252,6 +257,26 @@ export default {
         return
       }
 
+      await this.runQuery(false)
+    },
+    async handleViewAll() {
+      if (this.loading) return
+      this.queryParams = {
+        chromosome: '',
+        start: null,
+        end: null,
+        uniqueId: '',
+        population: '',
+        SVType: '',
+        page: 1,
+        size: this.pageSize
+      }
+      this.currentPage = 1
+      await this.runQuery(true)
+    },
+    async runQuery(viewAll) {
+      this.viewAllMode = Boolean(viewAll)
+
       this.loading = true
       this.error = null
       this.frequency = null
@@ -263,7 +288,8 @@ export default {
           ...this.queryParams,
           uniqueId: this.queryParams.uniqueId.trim() || null,
           page: this.currentPage,
-          size: this.pageSize
+          size: this.pageSize,
+          viewAll: this.viewAllMode
         })
         this.results = response.data || []
         this.total = Number(response.total || 0)
@@ -328,13 +354,13 @@ export default {
     nextPage() {
       if (this.currentPage < this.totalPages) {
         this.currentPage++
-        this.handleQuery()
+        this.runQuery(this.viewAllMode)
       }
     },
     prevPage() {
       if (this.currentPage > 1) {
         this.currentPage--
-        this.handleQuery()
+        this.runQuery(this.viewAllMode)
       }
     },
     formatPercent(value) {
@@ -436,6 +462,27 @@ label {
 
 .reset-btn:hover {
   background-color: #5a6268;
+}
+
+.view-all-btn {
+  min-width: 160px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  background: #315f93;
+  color: #fff;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.view-all-btn:hover:not(:disabled) {
+  background: #244a74;
+}
+
+.view-all-btn:disabled {
+  background: #c0c4cc;
+  cursor: not-allowed;
 }
 
 .loading {
