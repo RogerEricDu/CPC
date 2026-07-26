@@ -146,11 +146,12 @@
           </table>
         </div>
 
-        <div v-if="total > Number(size)" class="pagination">
-          <button @click="prevPage" :disabled="page <= 1" class="page-btn">Previous</button>
-          <span class="page-info">Page {{ page }}</span>
-          <button @click="nextPage" :disabled="page >= totalPages" class="page-btn">Next</button>
-        </div>
+        <VariantPagination
+          :current-page="page"
+          :total-pages="totalPages"
+          :disabled="loading"
+          @change="goToPage"
+        />
       </div>
 
       <div v-else class="no-results">
@@ -171,10 +172,11 @@
 import { getSnpFrequency, searchSNP } from '@/api/variant.js'
 import FrequencyMap from '@/components/variant/FrequencyMap.vue'
 import GenomeBrowserModal from '@/components/variant/GenomeBrowserModal.vue'
+import VariantPagination from '@/components/variant/VariantPagination.vue'
 
 export default {
   name: 'SNPQuery',
-  components: { FrequencyMap, GenomeBrowserModal },
+  components: { FrequencyMap, GenomeBrowserModal, VariantPagination },
   data() {
     return {
       rsId: '',
@@ -227,6 +229,7 @@ export default {
         return
       }
 
+      this.page = 1
       await this.runQuery(false)
     },
     async handleViewAll() {
@@ -312,17 +315,12 @@ export default {
       this.size = 10
       this.clearQueryOutput()
     },
-    prevPage() {
-      if (this.page > 1) {
-        this.page--
-        this.runQuery(this.viewAllMode)
-      }
-    },
-    nextPage() {
-      if (this.page < this.totalPages) {
-        this.page++
-        this.runQuery(this.viewAllMode)
-      }
+    goToPage(targetPage) {
+      if (this.loading) return
+      const nextPage = Math.min(Math.max(1, Number(targetPage) || 1), this.totalPages)
+      if (nextPage === this.page) return
+      this.page = nextPage
+      this.runQuery(this.viewAllMode)
     },
     formatPercent(value) {
       return `${((Number(value) || 0) * 100).toFixed(3)}%`
@@ -565,38 +563,6 @@ tr.selected {
 .frequency-btn:hover { background: #24587f; }
 .browser-btn { background: #72558d; }
 .browser-btn:hover { background: #5d4475; }
-
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 30px;
-}
-
-.page-btn {
-  padding: 8px 16px;
-  background-color: #409eff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.page-btn:hover:not(:disabled) {
-  background-color: #66b1ff;
-}
-
-.page-btn:disabled {
-  background-color: #c0c4cc;
-  cursor: not-allowed;
-}
-
-.page-info {
-  color: #606266;
-  font-weight: 500;
-}
 
 .no-results {
   text-align: center;

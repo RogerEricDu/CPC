@@ -159,11 +159,12 @@
           </table>
         </div>
 
-        <div class="pagination" v-if="total > 0">
-          <button @click="prevPage" :disabled="currentPage === 1" class="page-btn">Previous</button>
-          <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
-          <button @click="nextPage" :disabled="currentPage === totalPages" class="page-btn">Next</button>
-        </div>
+        <VariantPagination
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          :disabled="loading"
+          @change="goToPage"
+        />
       </div>
 
       <div v-else class="no-results">
@@ -184,10 +185,11 @@
 import { getSvFrequency, searchSV } from '@/api/variant'
 import FrequencyMap from '@/components/variant/FrequencyMap.vue'
 import GenomeBrowserModal from '@/components/variant/GenomeBrowserModal.vue'
+import VariantPagination from '@/components/variant/VariantPagination.vue'
 
 export default {
   name: 'SVQuery',
-  components: { FrequencyMap, GenomeBrowserModal },
+  components: { FrequencyMap, GenomeBrowserModal, VariantPagination },
   data() {
     return {
       queryParams: {
@@ -257,6 +259,7 @@ export default {
         return
       }
 
+      this.currentPage = 1
       await this.runQuery(false)
     },
     async handleViewAll() {
@@ -351,17 +354,12 @@ export default {
       this.currentPage = 1
       this.clearQueryOutput()
     },
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++
-        this.runQuery(this.viewAllMode)
-      }
-    },
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--
-        this.runQuery(this.viewAllMode)
-      }
+    goToPage(targetPage) {
+      if (this.loading) return
+      const nextPage = Math.min(Math.max(1, Number(targetPage) || 1), this.totalPages)
+      if (nextPage === this.currentPage) return
+      this.currentPage = nextPage
+      this.runQuery(this.viewAllMode)
     },
     formatPercent(value) {
       return `${((Number(value) || 0) * 100).toFixed(3)}%`
@@ -529,38 +527,6 @@ label {
   font-weight: 500;
 }
 
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  margin: 20px 0;
-}
-
-.page-btn {
-  padding: 8px 16px;
-  border: 1px solid #dcdfe6;
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.page-btn:hover:not(:disabled) {
-  border-color: var(--main-color);
-  color: var(--main-color);
-}
-
-.page-btn:disabled {
-  color: #ccc;
-  cursor: not-allowed;
-}
-
-.page-info {
-  color: #606266;
-  font-weight: 500;
-}
-
 .results-table {
   overflow-x: auto;
   margin: 20px 0;
@@ -684,9 +650,5 @@ tr.selected {
     align-items: flex-start;
   }
 
-  .pagination {
-    flex-direction: column;
-    gap: 10px;
-  }
 }
 </style>
