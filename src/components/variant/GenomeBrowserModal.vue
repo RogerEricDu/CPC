@@ -274,7 +274,8 @@ export default {
   flex-direction: column;
   width: 96vw;
   max-width: 1680px;
-  height: 94vh;
+  height: auto;
+  max-height: 94vh;
   overflow: hidden;
   border-radius: 12px;
   background: #fff;
