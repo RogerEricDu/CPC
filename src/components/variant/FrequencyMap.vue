@@ -47,6 +47,7 @@
             :src="worldMapUrl"
             width="2048"
             height="1024"
+            decoding="async"
             alt=""
             draggable="false"
             @load="handleMapLoad"
@@ -114,6 +115,19 @@ import worldMapUrl from '@/assets/maps/antv-standard-world.webp'
 const WORLD_WIDTH = 2048
 const WORLD_HEIGHT = 1024
 const MAX_ZOOM = 4
+let preloadedWorldMap = null
+
+function preloadWorldMap() {
+  if (preloadedWorldMap || typeof window === 'undefined' || !window.Image) return
+  preloadedWorldMap = new window.Image()
+  preloadedWorldMap.decoding = 'async'
+  preloadedWorldMap.src = worldMapUrl
+  if (typeof preloadedWorldMap.decode === 'function') {
+    preloadedWorldMap.decode().catch(() => {})
+  }
+}
+
+preloadWorldMap()
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value))
