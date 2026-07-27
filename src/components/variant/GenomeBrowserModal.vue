@@ -98,7 +98,11 @@ export default {
       this.error = ''
       try {
         const id = this.kind === 'snp' ? (this.variant.rsId || this.variant.id) : this.variant.id
-        const params = { id, chromosome: this.variant.chromosome }
+        const params = {
+          id,
+          chromosome: this.variant.chromosome,
+          assembly: this.variant.assembly
+        }
         const response = this.kind === 'snp'
           ? await getSnpBrowser(params)
           : await getSvBrowser(params)
@@ -202,7 +206,7 @@ export default {
         type: quantitative ? 'QuantitativeTrack' : 'FeatureTrack',
         trackId,
         name: track.label,
-        category: ['CPC variant data'],
+        category: track.kind === 'gene' ? ['Reference annotation'] : ['CPC variant data'],
         assemblyNames: [assemblyName],
         adapter: {
           type: 'FromConfigAdapter',
@@ -224,7 +228,11 @@ export default {
         ? start + 1
         : Math.max(start + 1, Number(feature.end) || featureStart)
       const score = feature.value === null || feature.value === undefined ? undefined : Number(feature.value)
+      const subfeatures = (feature.subfeatures || []).map((child, childIndex) =>
+        this.createFeature(child, browser, trackId, `${index}-${childIndex}`)
+      )
       return {
+        ...(feature.details || {}),
         uniqueId: `${trackId}-${index}-${this.safeId(feature.id || feature.label || 'feature')}`,
         refName: browser.chromosome,
         start,
@@ -232,7 +240,8 @@ export default {
         name: feature.label || feature.id,
         type: feature.type,
         score,
-        ...(feature.details || {})
+        strand: Number(feature.strand) || 0,
+        subfeatures
       }
     },
     safeId(value) {

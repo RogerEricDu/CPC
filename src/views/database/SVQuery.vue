@@ -1,19 +1,33 @@
 <template>
   <div class="sv-query">
     <div class="query-form">
-      <div class="form-group">
-        <label for="svType">SV Type:</label>
-        <select id="svType" v-model="queryParams.SVType" class="form-select">
-          <option value="">All Types</option>
-          <option value="DEL">Deletion (DEL)</option>
-          <option value="DUP">Duplication (DUP)</option>
-          <option value="INS">Insertion (INS)</option>
-          <option value="INV">Inversion (INV)</option>
-          <option value="BND">Breakend (BND)</option>
-        </select>
+      <div class="assembly-selector">
+        <span>Reference genome:</span>
+        <div class="assembly-options" role="group" aria-label="Reference genome">
+          <button
+            v-for="assembly in assemblies"
+            :key="assembly.id"
+            type="button"
+            :class="{ active: queryParams.assembly === assembly.id }"
+            :disabled="loading"
+            @click="selectAssembly(assembly.id)"
+          >{{ assembly.label }}</button>
+        </div>
       </div>
 
       <div class="form-row">
+        <div class="form-group">
+          <label for="svType">SV Type:</label>
+          <select id="svType" v-model="queryParams.SVType" class="form-select">
+            <option value="">All Types</option>
+            <option value="DEL">Deletion (DEL)</option>
+            <option value="DUP">Duplication (DUP)</option>
+            <option value="INS">Insertion (INS)</option>
+            <option value="INV">Inversion (INV)</option>
+            <option value="BND">Breakend (BND)</option>
+          </select>
+        </div>
+
         <div class="form-group">
           <label for="svChromosome">Chromosome:</label>
           <select id="svChromosome" v-model="queryParams.chromosome" class="form-select">
@@ -22,17 +36,6 @@
               {{ chr }}
             </option>
           </select>
-        </div>
-
-        <div class="form-group">
-          <label for="uniqueId">SV ID:</label>
-          <input
-            type="text"
-            id="uniqueId"
-            v-model="queryParams.uniqueId"
-            placeholder="e.g., SV_001"
-            class="form-input"
-          >
         </div>
       </div>
 
@@ -61,16 +64,14 @@
       </div>
 
       <div class="form-group">
-        <label for="population">Population:</label>
-        <select id="population" v-model="queryParams.population" class="form-select">
-          <option value="">All Populations</option>
-          <option value="han">Han Chinese</option>
-          <option value="zang">Tibetan</option>
-          <option value="miao">Miao</option>
-          <option value="mongolian">Mongolian</option>
-          <option value="southern">Southern Groups</option>
-          <option value="northern">Northern Groups</option>
-        </select>
+        <label for="uniqueId">SV ID:</label>
+        <input
+          type="text"
+          id="uniqueId"
+          v-model="queryParams.uniqueId"
+          :placeholder="svIdPlaceholder"
+          class="form-input"
+        >
       </div>
 
       <div class="form-actions">
@@ -182,7 +183,7 @@
 </template>
 
 <script>
-import { getSvFrequency, searchSV } from '@/api/variant'
+import { getSvAssemblies, getSvFrequency, searchSV } from '@/api/variant'
 import FrequencyMap from '@/components/variant/FrequencyMap.vue'
 import GenomeBrowserModal from '@/components/variant/GenomeBrowserModal.vue'
 import VariantPagination from '@/components/variant/VariantPagination.vue'
@@ -193,11 +194,11 @@ export default {
   data() {
     return {
       queryParams: {
+        assembly: 'CHM13v2.0',
         chromosome: '',
         start: null,
         end: null,
         uniqueId: '',
-        population: '',
         SVType: '',
         page: 1,
         size: 10
@@ -209,6 +210,10 @@ export default {
       loading: false,
       error: null,
       searched: false,
+      assemblies: [
+        { id: 'CHM13v2.0', label: 'CHM13v2.0', default: true },
+        { id: 'GRCh38', label: 'GRCh38', default: false }
+      ],
       chromosomes: Array.from({ length: 22 }, (_, index) => `chr${index + 1}`).concat(['chrX', 'chrY']),
       selectedVariant: null,
       frequency: null,
@@ -223,9 +228,35 @@ export default {
   computed: {
     totalPages() {
       return Math.max(1, Math.ceil(this.total / this.pageSize))
+    },
+    svIdPlaceholder() {
+      return this.queryParams.assembly === 'GRCh38'
+        ? 'e.g., chr1_10862_INS_76bp'
+        : 'e.g., chr1_11669_DEL_59bp'
     }
   },
+  created() {
+    this.loadAssemblies()
+  },
   methods: {
+    async loadAssemblies() {
+      try {
+        const response = await getSvAssemblies()
+        if (!Array.isArray(response.data) || response.data.length === 0) return
+        this.assemblies = response.data
+        const selected = response.data.find(item => item.default) || response.data[0]
+        if (!response.data.some(item => item.id === this.queryParams.assembly)) {
+          this.queryParams.assembly = selected.id
+        }
+      } catch (error) {
+        // Keep the built-in assembly options so the query endpoint can report availability.
+      }
+    },
+    selectAssembly(assembly) {
+      if (!assembly || assembly === this.queryParams.assembly || this.loading) return
+      this.queryParams.assembly = assembly
+      this.clearQueryOutput()
+    },
     hasSearchCriteria() {
       return Boolean(
         this.queryParams.uniqueId.trim() ||
@@ -265,11 +296,11 @@ export default {
     async handleViewAll() {
       if (this.loading) return
       this.queryParams = {
+        assembly: this.queryParams.assembly,
         chromosome: '',
         start: null,
         end: null,
         uniqueId: '',
-        population: '',
         SVType: '',
         page: 1,
         size: this.pageSize
@@ -322,7 +353,10 @@ export default {
       const requestId = ++this.frequencyRequestId
       this.frequencyLoading = true
       try {
-        const response = await getSvFrequency({ id: variant.id })
+        const response = await getSvFrequency({
+          id: variant.id,
+          assembly: variant.assembly || this.queryParams.assembly
+        })
         if (requestId === this.frequencyRequestId) this.frequency = response.data
       } catch (error) {
         if (requestId === this.frequencyRequestId) {
@@ -342,11 +376,11 @@ export default {
     },
     handleReset() {
       this.queryParams = {
+        assembly: this.queryParams.assembly,
         chromosome: '',
         start: null,
         end: null,
         uniqueId: '',
-        population: '',
         SVType: '',
         page: 1,
         size: 10
@@ -388,6 +422,48 @@ export default {
   color: #2b4275;
   margin-bottom: 20px;
   text-align: center;
+}
+
+.assembly-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #dfe5ec;
+  color: #4f6074;
+  font-weight: 600;
+}
+
+.assembly-options {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #c7d2df;
+  border-radius: 7px;
+  background: #e9eef4;
+}
+
+.assembly-options button {
+  min-width: 112px;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #53667c;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.assembly-options button.active {
+  background: #315f93;
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(38, 62, 91, 0.2);
+}
+
+.assembly-options button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .form-group {
@@ -640,6 +716,11 @@ tr.selected {
 }
 
 @media (max-width: 768px) {
+  .assembly-selector {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }

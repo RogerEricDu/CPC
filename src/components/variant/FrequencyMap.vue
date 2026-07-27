@@ -5,12 +5,36 @@
         <h3>Population frequency distribution</h3>
         <p>{{ frequency.variantId }} · {{ frequency.assembly }}</p>
       </div>
-      <div class="global-frequency">
-        <strong>{{ formatPercent(frequency.globalFrequency) }}</strong>
-        <span>{{ formatInteger(frequency.variantAlleles) }} / {{ formatInteger(frequency.totalAlleles) }} alleles</span>
+      <div class="heading-actions">
+        <div class="map-mode-toggle" role="group" aria-label="Frequency map aggregation">
+          <button
+            type="button"
+            :class="{ active: displayMode === 'continent' }"
+            @click="setDisplayMode('continent')"
+          >Continent</button>
+          <button
+            type="button"
+            :class="{ active: displayMode === 'population' }"
+            @click="setDisplayMode('population')"
+          >Population</button>
+        </div>
+        <div class="global-frequency">
+          <strong>{{ formatPercent(frequency.globalFrequency) }}</strong>
+          <span>{{ formatInteger(frequency.variantAlleles) }} / {{ formatInteger(frequency.totalAlleles) }} alleles</span>
+        </div>
       </div>
     </div>
-    <div ref="chart" class="frequency-map" role="img" :aria-label="`Population frequency map for ${frequency.variantId}`"></div>
+    <div class="map-stage">
+      <div v-if="mapLoading" class="map-status">Loading map...</div>
+      <div v-else-if="mapError" class="map-status map-error">{{ mapError }}</div>
+      <div
+        v-show="!mapLoading && !mapError"
+        ref="chart"
+        class="frequency-map"
+        role="img"
+        :aria-label="`${displayMode} frequency map for ${frequency.variantId}`"
+      ></div>
+    </div>
     <div class="frequency-legend" aria-hidden="true">
       <span><i class="variant-swatch"></i>Variant allele</span>
       <span><i class="reference-swatch"></i>Reference allele</span>
@@ -20,9 +44,9 @@
 
 <script>
 import * as echarts from 'echarts'
-import worldMap from '@/assets/maps/world-cpc.json'
+import { loadAntvWorldMap } from '@/utils/antvWorldMap'
 
-const MAP_NAME = 'cpc-variant-frequency-world'
+const MAP_NAME = 'cpc-antv-standard-world'
 let mapRegistered = false
 
 export default {
@@ -35,7 +59,11 @@ export default {
   },
   data() {
     return {
-      chart: null
+      chart: null,
+      boundaryLines: [],
+      displayMode: 'continent',
+      mapLoading: true,
+      mapError: ''
     }
   },
   watch: {
@@ -47,15 +75,8 @@ export default {
     }
   },
   mounted() {
-    if (!mapRegistered) {
-      echarts.registerMap(MAP_NAME, worldMap)
-      mapRegistered = true
-    }
-    this.chart = echarts.init(this.$refs.chart)
-    this.chart.on('mouseover', this.handleRingMouseOver)
-    this.chart.on('mouseout', this.handleRingMouseOut)
     window.addEventListener('resize', this.handleResize)
-    this.renderChart()
+    this.initializeMap()
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
@@ -66,6 +87,80 @@ export default {
     }
   },
   methods: {
+    async initializeMap() {
+      this.mapLoading = true
+      this.mapError = ''
+      try {
+        const { polygons, boundaries } = await loadAntvWorldMap()
+        if (!mapRegistered) {
+          echarts.registerMap(MAP_NAME, polygons)
+          mapRegistered = true
+        }
+        this.boundaryLines = this.extractBoundaryLines(boundaries)
+        this.mapLoading = false
+        await this.$nextTick()
+        this.chart = echarts.init(this.$refs.chart)
+        this.chart.on('mouseover', this.handleRingMouseOver)
+        this.chart.on('mouseout', this.handleRingMouseOut)
+        this.renderChart()
+      } catch (error) {
+        this.mapLoading = false
+        this.mapError = 'Unable to load the frequency map.'
+      }
+    },
+    extractBoundaryLines(boundaries) {
+      const lines = []
+      ;(boundaries.features || []).forEach(feature => {
+        const geometry = feature.geometry || {}
+        const type = String((feature.properties && feature.properties.type) || '').replace(/\0/g, '')
+        const groups = geometry.type === 'LineString'
+          ? [geometry.coordinates]
+          : geometry.type === 'MultiLineString' ? geometry.coordinates : []
+        groups.forEach(coordinates => {
+          lines.push({
+            coords: coordinates,
+            lineStyle: {
+              color: ['1', '8', '10', '11'].includes(type) ? '#9aa8b8' : '#738399',
+              width: ['1', '8', '10', '11'].includes(type) ? 0.65 : 0.9,
+              type: ['1', '8', '10', '11'].includes(type) ? 'dashed' : 'solid',
+              opacity: 0.9
+            }
+          })
+        })
+      })
+      return lines
+    },
+    setDisplayMode(mode) {
+      if (mode === this.displayMode) return
+      this.hideTooltip()
+      this.displayMode = mode
+      this.renderChart()
+    },
+    displayItems() {
+      const regions = Array.isArray(this.frequency.regions) ? this.frequency.regions : []
+      if (this.displayMode === 'continent') {
+        return regions
+          .filter(item => this.hasCoordinate(item.latitude) && this.hasCoordinate(item.longitude))
+          .map(item => ({ ...item, label: item.label, code: item.code }))
+      }
+      const populations = []
+      regions.forEach(region => {
+        ;(region.populations || []).forEach(population => {
+          if (!this.hasCoordinate(population.latitude) || !this.hasCoordinate(population.longitude)) return
+          populations.push({
+            ...population,
+            code: population.population,
+            label: population.population,
+            referenceFrequency: 1 - (Number(population.variantFrequency) || 0),
+            sampleCount: Math.floor((Number(population.totalAlleles) || 0) / 2)
+          })
+        })
+      })
+      return populations
+    },
+    hasCoordinate(value) {
+      return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
+    },
     formatPercent(value) {
       return `${((Number(value) || 0) * 100).toFixed(2)}%`
     },
@@ -73,8 +168,8 @@ export default {
       return Number(value || 0).toLocaleString()
     },
     renderChart() {
-      if (!this.chart || !this.frequency || !Array.isArray(this.frequency.regions)) return
-      const regions = this.frequency.regions
+      if (!this.chart || !this.frequency) return
+      const items = this.displayItems()
       this.chart.setOption({
         animation: false,
         tooltip: {
@@ -87,14 +182,14 @@ export default {
         },
         geo: {
           map: MAP_NAME,
+          nameProperty: 'SOC',
           roam: true,
           center: [15, 24],
           zoom: 1.08,
           scaleLimit: { min: 0.8, max: 7 },
           itemStyle: {
             areaColor: '#e9eef5',
-            borderColor: '#8795a8',
-            borderWidth: 0.7
+            borderWidth: 0
           },
           emphasis: {
             itemStyle: { areaColor: '#dce6f2' },
@@ -103,16 +198,31 @@ export default {
           select: { disabled: true }
         },
         series: [
-          this.createRingSeries(regions),
-          this.createLabelSeries(regions)
+          this.createBoundarySeries(),
+          this.createRingSeries(items),
+          this.createLabelSeries(items)
         ]
       }, true)
     },
-    createRingSeries(regions) {
+    createBoundarySeries() {
+      return {
+        id: 'standard-world-boundaries',
+        type: 'lines',
+        coordinateSystem: 'geo',
+        polyline: true,
+        z: 5,
+        silent: true,
+        progressive: 0,
+        data: this.boundaryLines
+      }
+    },
+    createRingSeries(items) {
       const data = []
-      regions.forEach(region => {
-        const total = Math.max(0, Number(region.totalAlleles) || 0)
-        const variant = Math.max(0, Math.min(total, Number(region.variantAlleles) || 0))
+      const radius = this.displayMode === 'continent' ? 25 : 10
+      const innerRadius = this.displayMode === 'continent' ? 15 : 5
+      items.forEach(item => {
+        const total = Math.max(0, Number(item.totalAlleles) || 0)
+        const variant = Math.max(0, Math.min(total, Number(item.variantAlleles) || 0))
         const segments = [
           { name: 'Variant allele', value: variant, color: '#d1495b' },
           { name: 'Reference allele', value: Math.max(0, total - variant), color: '#dbe4ee' }
@@ -123,10 +233,12 @@ export default {
           const endAngle = startAngle + (segment.value / total) * Math.PI * 2
           data.push({
             name: segment.name,
-            value: [region.longitude, region.latitude, segment.value, startAngle, endAngle],
+            value: [item.longitude, item.latitude, segment.value, startAngle, endAngle],
             segmentValue: segment.value,
             color: segment.color,
-            region
+            radius,
+            innerRadius,
+            item
           })
           startAngle = endAngle
         })
@@ -141,7 +253,7 @@ export default {
         progressive: 0,
         clip: false,
         renderItem: (params, api) => {
-          const item = data[params.dataIndex]
+          const datum = data[params.dataIndex]
           const center = api.coord([api.value(0), api.value(1)])
           if (!center || !Number.isFinite(center[0]) || !Number.isFinite(center[1])) return null
           return {
@@ -149,16 +261,16 @@ export default {
             shape: {
               cx: center[0],
               cy: center[1],
-              r: 25,
-              r0: 15,
+              r: datum.radius,
+              r0: datum.innerRadius,
               startAngle: api.value(3),
               endAngle: api.value(4),
               clockwise: true
             },
             style: {
-              fill: item.color,
+              fill: datum.color,
               stroke: '#fff',
-              lineWidth: 1
+              lineWidth: this.displayMode === 'continent' ? 1 : 0.7
             },
             emphasis: {
               style: {
@@ -171,10 +283,17 @@ export default {
         data
       }
     },
-    createLabelSeries(regions) {
+    createLabelSeries(items) {
+      let labels = items
+      if (this.displayMode === 'population') {
+        labels = items
+          .filter(item => Number(item.variantAlleles) > 0)
+          .sort((left, right) => Number(right.variantFrequency) - Number(left.variantFrequency))
+          .slice(0, 14)
+      }
       return {
-        id: 'frequency-region-labels',
-        name: 'Regions',
+        id: 'frequency-labels',
+        name: this.displayMode === 'continent' ? 'Continents' : 'Populations',
         type: 'scatter',
         coordinateSystem: 'geo',
         z: 30,
@@ -184,41 +303,45 @@ export default {
         label: {
           show: true,
           position: 'bottom',
-          distance: 27,
+          distance: this.displayMode === 'continent' ? 27 : 11,
           color: '#1f2d3d',
-          fontSize: 11,
+          fontSize: this.displayMode === 'continent' ? 11 : 9,
           fontWeight: 600,
-          lineHeight: 15,
-          formatter: params => `${params.data.region.label}\n${this.formatPercent(params.data.region.variantFrequency)}`
+          lineHeight: 14,
+          formatter: params => this.displayMode === 'continent'
+            ? `${params.data.item.label}\n${this.formatPercent(params.data.item.variantFrequency)}`
+            : params.data.item.label
         },
-        data: regions.map(region => ({
-          name: region.label,
-          value: [region.longitude, region.latitude],
-          region
+        data: labels.map(item => ({
+          name: item.label,
+          value: [item.longitude, item.latitude],
+          item
         }))
       }
     },
     tooltipContent(params) {
-      const region = params.data && params.data.region
-      if (!region) return params.name || ''
+      const item = params.data && params.data.item
+      if (!item) return params.name || ''
       const alleleLine = params.seriesType === 'custom' && params.data.segmentValue !== undefined
         ? `<br>${params.name}: ${this.formatInteger(params.data.segmentValue)}`
         : ''
       return [
-        `<strong>${region.label}</strong>`,
-        `<br>Variant frequency: ${this.formatPercent(region.variantFrequency)}`,
-        `<br>Variant alleles: ${this.formatInteger(region.variantAlleles)}`,
-        `<br>Total alleles: ${this.formatInteger(region.totalAlleles)}`,
+        `<strong>${item.label}</strong>`,
+        `<br>Variant frequency: ${this.formatPercent(item.variantFrequency)}`,
+        `<br>Variant alleles: ${this.formatInteger(item.variantAlleles)}`,
+        `<br>Total alleles: ${this.formatInteger(item.totalAlleles)}`,
         alleleLine
       ].join('')
     },
     handleRingMouseOver(params) {
       if (!params || params.seriesId !== 'frequency-rings') return
-      this.animateRing(params.event && params.event.target, 33)
+      const datum = params.data || {}
+      this.animateRing(params.event && params.event.target, (Number(datum.radius) || 10) + 7)
     },
     handleRingMouseOut(params) {
       if (!params || params.seriesId !== 'frequency-rings') return
-      this.animateRing(params.event && params.event.target, 25)
+      const datum = params.data || {}
+      this.animateRing(params.event && params.event.target, Number(datum.radius) || 10)
     },
     animateRing(target, radius) {
       if (!target || !target.shape || !Number.isFinite(target.shape.r)) return
@@ -234,8 +357,7 @@ export default {
       }
     },
     handleResize() {
-      if (!this.chart) return
-      this.chart.resize()
+      if (this.chart) this.chart.resize()
     }
   }
 }
@@ -271,6 +393,36 @@ export default {
   font-size: 0.9rem;
 }
 
+.heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.map-mode-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #c9d4e1;
+  border-radius: 7px;
+  background: #f2f5f9;
+}
+
+.map-mode-toggle button {
+  padding: 7px 13px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #52657b;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.map-mode-toggle button.active {
+  background: #315f93;
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(32, 56, 86, 0.22);
+}
+
 .global-frequency {
   display: flex;
   flex-direction: column;
@@ -285,10 +437,25 @@ export default {
   line-height: 1.2;
 }
 
+.map-stage {
+  position: relative;
+  min-height: 500px;
+}
+
 .frequency-map {
   width: 100%;
   height: 500px;
 }
+
+.map-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  color: #64758a;
+}
+
+.map-error { color: #a62c3d; }
 
 .frequency-legend {
   display: flex;
@@ -313,9 +480,16 @@ export default {
 .variant-swatch { background: #d1495b; }
 .reference-swatch { background: #dbe4ee; border: 1px solid #b7c4d3; }
 
-@media (max-width: 760px) {
-  .panel-heading { flex-direction: column; }
+@media (max-width: 900px) {
+  .panel-heading,
+  .heading-actions { flex-direction: column; }
+  .heading-actions { align-items: flex-start; gap: 12px; }
   .global-frequency { align-items: flex-start; }
+}
+
+@media (max-width: 760px) {
+  .map-stage,
+  .map-status { min-height: 390px; }
   .frequency-map { height: 390px; }
 }
 </style>
