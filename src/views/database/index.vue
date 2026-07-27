@@ -89,11 +89,12 @@
 </template>
 
 <script>
-import SNPQuery from './SNPQuery.vue'
-import SVQuery from './SVQuery.vue'
-import ImputationTool from './ImputationTool.vue'
-import Pangraph from './Pangraph.vue';
 import { getCurrentUser, hasBasicAccess } from '@/utils/auth'
+
+const SNPQuery = () => import(/* webpackChunkName: "database-snp" */ './SNPQuery.vue')
+const SVQuery = () => import(/* webpackChunkName: "database-sv" */ './SVQuery.vue')
+const ImputationTool = () => import(/* webpackChunkName: "database-imputation" */ './ImputationTool.vue')
+const Pangraph = () => import(/* webpackChunkName: "database-pangraph" */ './Pangraph.vue')
 
 const DATABASE_TABS = ['snp', 'sv', 'imputation', 'pangraph']
 

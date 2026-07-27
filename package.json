@@ -5,9 +5,10 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "build:cpc-dev": "npm run validate:map && vue-cli-service build --mode cpc-dev",
-    "build:cpc-prod": "npm run validate:map && vue-cli-service build --mode cpc-prod",
+    "build:cpc-dev": "npm run validate:map && vue-cli-service build --mode cpc-dev && npm run validate:bundle",
+    "build:cpc-prod": "npm run validate:map && vue-cli-service build --mode cpc-prod && npm run validate:bundle",
     "validate:map": "node scripts/validate-world-map.js",
+    "validate:bundle": "node scripts/validate-initial-bundle.js",
     "lint": "vue-cli-service lint"
   },
   "dependencies": {

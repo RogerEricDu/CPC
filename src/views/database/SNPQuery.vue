@@ -1,13 +1,20 @@
 <template>
   <div class="snp-query">
     <div class="query-form">
+      <ReferenceGenomeSwitch
+        :value="assembly"
+        :assemblies="assemblies"
+        :disabled="loading"
+        @change="selectAssembly"
+      />
+
       <div class="form-group">
         <label for="rsId">SNP ID (rsID):</label>
         <input
           type="text"
           id="rsId"
           v-model="rsId"
-          placeholder="e.g., rs123456"
+          :placeholder="snpIdPlaceholder"
           class="form-input"
         >
       </div>
@@ -98,7 +105,12 @@
         <div class="spinner"></div>
         <span>Loading population frequencies...</span>
       </div>
-      <FrequencyMap v-else-if="frequency" ref="frequencyMap" :frequency="frequency" />
+      <FrequencyMap
+        v-else-if="frequency"
+        :key="`${frequency.assembly}:${frequency.variantId}`"
+        ref="frequencyMap"
+        :frequency="frequency"
+      />
       <div v-else-if="frequencyError" class="warning-message">{{ frequencyError }}</div>
 
       <div v-if="results && results.length > 0" class="results-section">
@@ -169,16 +181,22 @@
 </template>
 
 <script>
-import { getSnpFrequency, searchSNP } from '@/api/variant.js'
+import { getSnpAssemblies, getSnpFrequency, searchSNP } from '@/api/variant.js'
 import FrequencyMap from '@/components/variant/FrequencyMap.vue'
 import GenomeBrowserModal from '@/components/variant/GenomeBrowserModal.vue'
+import ReferenceGenomeSwitch from '@/components/variant/ReferenceGenomeSwitch.vue'
 import VariantPagination from '@/components/variant/VariantPagination.vue'
 
 export default {
   name: 'SNPQuery',
-  components: { FrequencyMap, GenomeBrowserModal, VariantPagination },
+  components: { FrequencyMap, GenomeBrowserModal, ReferenceGenomeSwitch, VariantPagination },
   data() {
     return {
+      assembly: 'GRCh38',
+      assemblies: [
+        { id: 'GRCh38', label: 'GRCh38', default: true },
+        { id: 'CHM13v2.0', label: 'CHM13v2.0', default: false }
+      ],
       rsId: '',
       chromosome: '',
       position: null,
@@ -204,9 +222,35 @@ export default {
   computed: {
     totalPages() {
       return Math.max(1, Math.ceil(this.total / Number(this.size || 10)))
+    },
+    snpIdPlaceholder() {
+      return this.assembly === 'CHM13v2.0'
+        ? 'e.g., chr21_7248_C_T'
+        : 'e.g., rs1204610256'
     }
   },
+  created() {
+    this.loadAssemblies()
+  },
   methods: {
+    async loadAssemblies() {
+      try {
+        const response = await getSnpAssemblies()
+        if (!Array.isArray(response.data) || response.data.length === 0) return
+        this.assemblies = response.data
+        const selected = response.data.find(item => item.default) || response.data[0]
+        if (!response.data.some(item => item.id === this.assembly)) {
+          this.assembly = selected.id
+        }
+      } catch (error) {
+        // Keep built-in options so the search endpoint can return the configuration error.
+      }
+    },
+    selectAssembly(assembly) {
+      if (!assembly || assembly === this.assembly || this.loading) return
+      this.assembly = assembly
+      this.clearQueryOutput()
+    },
     hasSearchCriteria() {
       return Boolean(this.rsId.trim() || this.chromosome || this.position)
     },
@@ -252,6 +296,7 @@ export default {
 
       try {
         const response = await searchSNP({
+          assembly: this.assembly,
           rsId: this.rsId.trim() || null,
           chromosome: this.chromosome || null,
           position: this.position || null,
@@ -287,7 +332,8 @@ export default {
         const response = await getSnpFrequency({
           id: variant.rsId,
           chromosome: variant.chromosome,
-          position: variant.position
+          position: variant.position,
+          assembly: variant.assembly || this.assembly
         })
         if (requestId === this.frequencyRequestId) this.frequency = response.data
       } catch (error) {

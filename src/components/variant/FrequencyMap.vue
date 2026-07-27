@@ -6,7 +6,7 @@
         <p>{{ frequency.variantId }} · {{ frequency.assembly }}</p>
       </div>
       <div class="heading-actions">
-        <div class="map-mode-toggle" role="group" aria-label="Frequency map aggregation">
+        <div v-if="hasRegionalData" class="map-mode-toggle" role="group" aria-label="Frequency map aggregation">
           <button
             type="button"
             :class="{ active: displayMode === 'continent' }"
@@ -24,7 +24,7 @@
         </div>
       </div>
     </div>
-    <div class="map-stage">
+    <div v-if="hasRegionalData" class="map-stage">
       <div v-if="mapLoading" class="map-status">Loading map...</div>
       <div v-else-if="mapError" class="map-status map-error">{{ mapError }}</div>
       <div
@@ -35,19 +35,34 @@
         :aria-label="`${displayMode} frequency map for ${frequency.variantId}`"
       ></div>
     </div>
-    <div class="frequency-legend" aria-hidden="true">
+    <div v-if="hasRegionalData" class="frequency-legend" aria-hidden="true">
       <span><i class="variant-swatch"></i>Variant allele</span>
       <span><i class="reference-swatch"></i>Reference allele</span>
     </div>
+    <div v-else class="frequency-unavailable">Only the global frequency is available for this variant.</div>
   </section>
 </template>
 
 <script>
-import * as echarts from 'echarts'
-import { loadAntvWorldMap } from '@/utils/antvWorldMap'
-
 const MAP_NAME = 'cpc-antv-standard-world'
 let mapRegistered = false
+let frequencyMapRuntimePromise
+
+function loadFrequencyMapRuntime() {
+  if (!frequencyMapRuntimePromise) {
+    frequencyMapRuntimePromise = Promise.all([
+      import(/* webpackChunkName: "frequency-map-runtime" */ '@/utils/frequencyMapRuntime'),
+      import(/* webpackChunkName: "frequency-map-runtime" */ '@/utils/antvWorldMap')
+    ]).then(([echartsModule, mapModule]) => ({
+      echarts: echartsModule.default,
+      loadAntvWorldMap: mapModule.loadAntvWorldMap
+    })).catch(error => {
+      frequencyMapRuntimePromise = null
+      throw error
+    })
+  }
+  return frequencyMapRuntimePromise
+}
 
 export default {
   name: 'FrequencyMap',
@@ -55,31 +70,59 @@ export default {
     frequency: {
       type: Object,
       required: true
+    },
+    preferredPopulation: {
+      type: String,
+      default: ''
     }
+  },
+  beforeCreate() {
+    this._echarts = null
+    this._mapCancelled = false
+    this._resizeFrame = null
   },
   data() {
     return {
       chart: null,
       boundaryLines: [],
-      displayMode: 'continent',
+      displayMode: this.preferredPopulation ? 'population' : 'continent',
       mapLoading: true,
       mapError: ''
     }
   },
+  computed: {
+    hasRegionalData() {
+      const regions = Array.isArray(this.frequency && this.frequency.regions)
+        ? this.frequency.regions
+        : []
+      return regions.some(region => {
+        if (this.hasCoordinate(region.latitude) && this.hasCoordinate(region.longitude)) return true
+        return (region.populations || []).some(population => (
+          this.hasCoordinate(population.latitude) && this.hasCoordinate(population.longitude)
+        ))
+      })
+    }
+  },
   watch: {
-    frequency: {
-      deep: true,
-      handler() {
-        this.renderChart()
-      }
+    frequency() {
+      this.renderChart()
+    },
+    preferredPopulation(value) {
+      if (value) this.setDisplayMode('population')
     }
   },
   mounted() {
     window.addEventListener('resize', this.handleResize)
-    this.initializeMap()
+    if (this.hasRegionalData) {
+      this.initializeMap()
+    } else {
+      this.mapLoading = false
+    }
   },
   beforeDestroy() {
+    this._mapCancelled = true
     window.removeEventListener('resize', this.handleResize)
+    if (this._resizeFrame) cancelAnimationFrame(this._resizeFrame)
     if (this.chart) {
       this.chart.off('mouseover', this.handleRingMouseOver)
       this.chart.off('mouseout', this.handleRingMouseOut)
@@ -91,86 +134,30 @@ export default {
       this.mapLoading = true
       this.mapError = ''
       try {
-        const { polygons, boundaries } = await loadAntvWorldMap()
+        const { echarts, loadAntvWorldMap } = await loadFrequencyMapRuntime()
+        const { polygons, boundaryLines } = await loadAntvWorldMap()
+        if (this._mapCancelled) return
+        this._echarts = echarts
         if (!mapRegistered) {
           echarts.registerMap(MAP_NAME, polygons)
           mapRegistered = true
         }
-        this.boundaryLines = this.extractBoundaryLines(boundaries)
+        this.boundaryLines = boundaryLines
         this.mapLoading = false
         await this.$nextTick()
+        if (this._mapCancelled || !this.$refs.chart) return
         this.chart = echarts.init(this.$refs.chart)
         this.chart.on('mouseover', this.handleRingMouseOver)
         this.chart.on('mouseout', this.handleRingMouseOut)
+        this.chart.setOption(this.createBaseOption(), { notMerge: true })
         this.renderChart()
       } catch (error) {
         this.mapLoading = false
         this.mapError = 'Unable to load the frequency map.'
       }
     },
-    extractBoundaryLines(boundaries) {
-      const lines = []
-      ;(boundaries.features || []).forEach(feature => {
-        const geometry = feature.geometry || {}
-        const type = String((feature.properties && feature.properties.type) || '').replace(/\0/g, '')
-        const groups = geometry.type === 'LineString'
-          ? [geometry.coordinates]
-          : geometry.type === 'MultiLineString' ? geometry.coordinates : []
-        groups.forEach(coordinates => {
-          lines.push({
-            coords: coordinates,
-            lineStyle: {
-              color: ['1', '8', '10', '11'].includes(type) ? '#9aa8b8' : '#738399',
-              width: ['1', '8', '10', '11'].includes(type) ? 0.65 : 0.9,
-              type: ['1', '8', '10', '11'].includes(type) ? 'dashed' : 'solid',
-              opacity: 0.9
-            }
-          })
-        })
-      })
-      return lines
-    },
-    setDisplayMode(mode) {
-      if (mode === this.displayMode) return
-      this.hideTooltip()
-      this.displayMode = mode
-      this.renderChart()
-    },
-    displayItems() {
-      const regions = Array.isArray(this.frequency.regions) ? this.frequency.regions : []
-      if (this.displayMode === 'continent') {
-        return regions
-          .filter(item => this.hasCoordinate(item.latitude) && this.hasCoordinate(item.longitude))
-          .map(item => ({ ...item, label: item.label, code: item.code }))
-      }
-      const populations = []
-      regions.forEach(region => {
-        ;(region.populations || []).forEach(population => {
-          if (!this.hasCoordinate(population.latitude) || !this.hasCoordinate(population.longitude)) return
-          populations.push({
-            ...population,
-            code: population.population,
-            label: population.population,
-            referenceFrequency: 1 - (Number(population.variantFrequency) || 0),
-            sampleCount: Math.floor((Number(population.totalAlleles) || 0) / 2)
-          })
-        })
-      })
-      return populations
-    },
-    hasCoordinate(value) {
-      return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
-    },
-    formatPercent(value) {
-      return `${((Number(value) || 0) * 100).toFixed(2)}%`
-    },
-    formatInteger(value) {
-      return Number(value || 0).toLocaleString()
-    },
-    renderChart() {
-      if (!this.chart || !this.frequency) return
-      const items = this.displayItems()
-      this.chart.setOption({
+    createBaseOption() {
+      return {
         animation: false,
         tooltip: {
           trigger: 'item',
@@ -197,12 +184,56 @@ export default {
           },
           select: { disabled: true }
         },
+        series: []
+      }
+    },
+    setDisplayMode(mode) {
+      if (mode === this.displayMode) return
+      this.hideTooltip()
+      this.displayMode = mode
+      this.renderChart()
+    },
+    displayItems() {
+      const regions = Array.isArray(this.frequency.regions) ? this.frequency.regions : []
+      if (this.displayMode === 'continent') {
+        return regions
+          .filter(item => this.hasCoordinate(item.latitude) && this.hasCoordinate(item.longitude))
+          .map(item => ({ ...item, label: item.label, code: item.code }))
+      }
+      const populations = []
+      regions.forEach(region => {
+        (region.populations || []).forEach(population => {
+          if (!this.hasCoordinate(population.latitude) || !this.hasCoordinate(population.longitude)) return
+          populations.push({
+            ...population,
+            code: population.population,
+            label: population.population,
+            referenceFrequency: 1 - (Number(population.variantFrequency) || 0),
+            sampleCount: Math.floor((Number(population.totalAlleles) || 0) / 2)
+          })
+        })
+      })
+      return populations
+    },
+    hasCoordinate(value) {
+      return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
+    },
+    formatPercent(value) {
+      return `${((Number(value) || 0) * 100).toFixed(2)}%`
+    },
+    formatInteger(value) {
+      return Number(value || 0).toLocaleString()
+    },
+    renderChart() {
+      if (!this.chart || !this.frequency) return
+      const items = this.displayItems()
+      this.chart.setOption({
         series: [
           this.createBoundarySeries(),
           this.createRingSeries(items),
           this.createLabelSeries(items)
         ]
-      }, true)
+      }, { replaceMerge: ['series'], lazyUpdate: true })
     },
     createBoundarySeries() {
       return {
@@ -357,7 +388,11 @@ export default {
       }
     },
     handleResize() {
-      if (this.chart) this.chart.resize()
+      if (this._resizeFrame) cancelAnimationFrame(this._resizeFrame)
+      this._resizeFrame = requestAnimationFrame(() => {
+        this._resizeFrame = null
+        if (this.chart) this.chart.resize()
+      })
     }
   }
 }
@@ -456,6 +491,15 @@ export default {
 }
 
 .map-error { color: #a62c3d; }
+
+.frequency-unavailable {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 8px;
+  background: #f5f7fa;
+  color: #5e6d80;
+  text-align: center;
+}
 
 .frequency-legend {
   display: flex;

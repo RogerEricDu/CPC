@@ -16,12 +16,38 @@ async function fetchGeobuf(filename) {
   return geobuf.decode(new Pbf(new Uint8Array(await response.arrayBuffer())))
 }
 
+function extractBoundaryLines(boundaries) {
+  const lines = []
+  ;(boundaries.features || []).forEach(feature => {
+    const geometry = feature.geometry || {}
+    const type = String((feature.properties && feature.properties.type) || '').replace(/\0/g, '')
+    const groups = geometry.type === 'LineString'
+      ? [geometry.coordinates]
+      : geometry.type === 'MultiLineString' ? geometry.coordinates : []
+    groups.forEach(coordinates => {
+      lines.push({
+        coords: coordinates,
+        lineStyle: {
+          color: ['1', '8', '10', '11'].includes(type) ? '#9aa8b8' : '#738399',
+          width: ['1', '8', '10', '11'].includes(type) ? 0.65 : 0.9,
+          type: ['1', '8', '10', '11'].includes(type) ? 'dashed' : 'solid',
+          opacity: 0.9
+        }
+      })
+    })
+  })
+  return lines
+}
+
 export function loadAntvWorldMap() {
   if (!worldMapPromise) {
     worldMapPromise = Promise.all([
       fetchGeobuf('antv-world-polygon.pbf'),
       fetchGeobuf('antv-world-line.pbf')
-    ]).then(([polygons, boundaries]) => ({ polygons, boundaries }))
+    ]).then(([polygons, boundaries]) => ({
+      polygons,
+      boundaryLines: extractBoundaryLines(boundaries)
+    }))
       .catch(error => {
         worldMapPromise = null
         throw error

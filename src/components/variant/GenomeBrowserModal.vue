@@ -17,10 +17,28 @@
 </template>
 
 <script>
-import { createViewState, JBrowseLinearGenomeView } from '@jbrowse/react-linear-genome-view2'
-import React from 'react'
-import * as ReactDOM from 'react-dom/client'
 import { getSnpBrowser, getSvBrowser } from '@/api/variant'
+
+let jbrowseRuntimePromise
+
+function loadJBrowseRuntime() {
+  if (!jbrowseRuntimePromise) {
+    jbrowseRuntimePromise = Promise.all([
+      import(/* webpackChunkName: "genome-browser-runtime" */ '@jbrowse/react-linear-genome-view2'),
+      import(/* webpackChunkName: "genome-browser-runtime" */ 'react'),
+      import(/* webpackChunkName: "genome-browser-runtime" */ 'react-dom/client')
+    ]).then(([jbrowse, react, reactDom]) => ({
+      createViewState: jbrowse.createViewState,
+      JBrowseLinearGenomeView: jbrowse.JBrowseLinearGenomeView,
+      React: react.default || react,
+      ReactDOM: reactDom
+    })).catch(error => {
+      jbrowseRuntimePromise = null
+      throw error
+    })
+  }
+  return jbrowseRuntimePromise
+}
 
 const CHROMOSOME_LENGTHS = {
   GRCh38: {
@@ -51,6 +69,7 @@ export default {
   beforeCreate() {
     this._jbrowseReactRoot = null
     this._jbrowseViewState = null
+    this._jbrowseRuntime = null
   },
   data() {
     return {
@@ -103,10 +122,12 @@ export default {
           chromosome: this.variant.chromosome,
           assembly: this.variant.assembly
         }
-        const response = this.kind === 'snp'
-          ? await getSnpBrowser(params)
-          : await getSvBrowser(params)
+        const browserRequest = this.kind === 'snp'
+          ? getSnpBrowser(params)
+          : getSvBrowser(params)
+        const [response, runtime] = await Promise.all([browserRequest, loadJBrowseRuntime()])
         if (requestId !== this.loadRequestId || !this.visible) return
+        this._jbrowseRuntime = runtime
         this.browser = response.data
         this.loading = false
         await this.$nextTick()
@@ -123,10 +144,11 @@ export default {
     },
     renderJBrowse() {
       const container = this.$refs.jbrowse
-      if (!container || !this.browser) return
-      this._jbrowseViewState = createViewState(this.createJBrowseOptions(this.browser))
-      this._jbrowseReactRoot = ReactDOM.createRoot(container)
-      this._jbrowseReactRoot.render(React.createElement(JBrowseLinearGenomeView, { viewState: this._jbrowseViewState }))
+      const runtime = this._jbrowseRuntime
+      if (!container || !this.browser || !runtime) return
+      this._jbrowseViewState = runtime.createViewState(this.createJBrowseOptions(this.browser))
+      this._jbrowseReactRoot = runtime.ReactDOM.createRoot(container)
+      this._jbrowseReactRoot.render(runtime.React.createElement(runtime.JBrowseLinearGenomeView, { viewState: this._jbrowseViewState }))
     },
     createJBrowseOptions(browser) {
       const key = this.safeId(`${this.kind}-${browser.selectedId}`)

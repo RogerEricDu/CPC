@@ -1,17 +1,27 @@
 <template>
   <div class="sv-query">
     <div class="query-form">
-      <div class="assembly-selector">
-        <span>Reference genome:</span>
-        <div class="assembly-options" role="group" aria-label="Reference genome">
-          <button
-            v-for="assembly in assemblies"
-            :key="assembly.id"
-            type="button"
-            :class="{ active: queryParams.assembly === assembly.id }"
-            :disabled="loading"
-            @click="selectAssembly(assembly.id)"
-          >{{ assembly.label }}</button>
+      <div class="form-row reference-row">
+        <ReferenceGenomeSwitch
+          :value="queryParams.assembly"
+          :assemblies="assemblies"
+          :disabled="loading"
+          @change="selectAssembly"
+        />
+
+        <div class="form-group">
+          <label for="svPopulation">Population:</label>
+          <select
+            id="svPopulation"
+            v-model="queryParams.population"
+            class="form-select"
+            :disabled="loading || populationsLoading"
+          >
+            <option value="">All Populations</option>
+            <option v-for="population in populations" :key="population.id" :value="population.id">
+              {{ population.label }}
+            </option>
+          </select>
         </div>
       </div>
 
@@ -101,7 +111,13 @@
         <div class="spinner"></div>
         <span>Loading population frequencies...</span>
       </div>
-      <FrequencyMap v-else-if="frequency" ref="frequencyMap" :frequency="frequency" />
+      <FrequencyMap
+        v-else-if="frequency"
+        :key="`${frequency.assembly}:${frequency.variantId}`"
+        ref="frequencyMap"
+        :frequency="frequency"
+        :preferred-population="queryParams.population"
+      />
       <div v-else-if="frequencyError" class="warning-message">{{ frequencyError }}</div>
 
       <div v-if="results && results.length > 0" class="results-section">
@@ -183,18 +199,20 @@
 </template>
 
 <script>
-import { getSvAssemblies, getSvFrequency, searchSV } from '@/api/variant'
+import { getSvAssemblies, getSvFrequency, getSvPopulations, searchSV } from '@/api/variant'
 import FrequencyMap from '@/components/variant/FrequencyMap.vue'
 import GenomeBrowserModal from '@/components/variant/GenomeBrowserModal.vue'
+import ReferenceGenomeSwitch from '@/components/variant/ReferenceGenomeSwitch.vue'
 import VariantPagination from '@/components/variant/VariantPagination.vue'
 
 export default {
   name: 'SVQuery',
-  components: { FrequencyMap, GenomeBrowserModal, VariantPagination },
+  components: { FrequencyMap, GenomeBrowserModal, ReferenceGenomeSwitch, VariantPagination },
   data() {
     return {
       queryParams: {
         assembly: 'CHM13v2.0',
+        population: '',
         chromosome: '',
         start: null,
         end: null,
@@ -214,6 +232,8 @@ export default {
         { id: 'CHM13v2.0', label: 'CHM13v2.0', default: true },
         { id: 'GRCh38', label: 'GRCh38', default: false }
       ],
+      populations: [],
+      populationsLoading: false,
       chromosomes: Array.from({ length: 22 }, (_, index) => `chr${index + 1}`).concat(['chrX', 'chrY']),
       selectedVariant: null,
       frequency: null,
@@ -250,16 +270,36 @@ export default {
         }
       } catch (error) {
         // Keep the built-in assembly options so the query endpoint can report availability.
+      } finally {
+        await this.loadPopulations()
+      }
+    },
+    async loadPopulations() {
+      this.populationsLoading = true
+      try {
+        const response = await getSvPopulations({ assembly: this.queryParams.assembly })
+        this.populations = Array.isArray(response.data) ? response.data : []
+        if (!this.populations.some(item => item.id === this.queryParams.population)) {
+          this.queryParams.population = ''
+        }
+      } catch (error) {
+        this.populations = []
+        this.queryParams.population = ''
+      } finally {
+        this.populationsLoading = false
       }
     },
     selectAssembly(assembly) {
       if (!assembly || assembly === this.queryParams.assembly || this.loading) return
       this.queryParams.assembly = assembly
+      this.queryParams.population = ''
       this.clearQueryOutput()
+      this.loadPopulations()
     },
     hasSearchCriteria() {
       return Boolean(
         this.queryParams.uniqueId.trim() ||
+        this.queryParams.population ||
         this.queryParams.SVType ||
         this.queryParams.chromosome ||
         this.queryParams.start ||
@@ -297,6 +337,7 @@ export default {
       if (this.loading) return
       this.queryParams = {
         assembly: this.queryParams.assembly,
+        population: '',
         chromosome: '',
         start: null,
         end: null,
@@ -377,6 +418,7 @@ export default {
     handleReset() {
       this.queryParams = {
         assembly: this.queryParams.assembly,
+        population: '',
         chromosome: '',
         start: null,
         end: null,
@@ -424,48 +466,6 @@ export default {
   text-align: center;
 }
 
-.assembly-selector {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 22px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid #dfe5ec;
-  color: #4f6074;
-  font-weight: 600;
-}
-
-.assembly-options {
-  display: inline-flex;
-  padding: 3px;
-  border: 1px solid #c7d2df;
-  border-radius: 7px;
-  background: #e9eef4;
-}
-
-.assembly-options button {
-  min-width: 112px;
-  padding: 8px 15px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: #53667c;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.assembly-options button.active {
-  background: #315f93;
-  color: #fff;
-  box-shadow: 0 2px 5px rgba(38, 62, 91, 0.2);
-}
-
-.assembly-options button:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
 .form-group {
   margin-bottom: 20px;
 }
@@ -474,6 +474,10 @@ export default {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
+}
+
+.reference-row {
+  align-items: end;
 }
 
 .form-actions {
@@ -716,11 +720,6 @@ tr.selected {
 }
 
 @media (max-width: 768px) {
-  .assembly-selector {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .form-row {
     grid-template-columns: 1fr;
   }

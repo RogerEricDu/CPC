@@ -31,6 +31,13 @@ export function getSnpFrequency(params) {
   })
 }
 
+export function getSnpAssemblies() {
+  return request({
+    url: '/snp/assemblies',
+    method: 'get'
+  })
+}
+
 export function getSvFrequency(params) {
   return request({
     url: '/sv/frequency',
@@ -43,6 +50,14 @@ export function getSvAssemblies() {
   return request({
     url: '/sv/assemblies',
     method: 'get'
+  })
+}
+
+export function getSvPopulations(params) {
+  return request({
+    url: '/sv/populations',
+    method: 'get',
+    params
   })
 }
 
