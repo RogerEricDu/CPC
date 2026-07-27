@@ -1,0 +1,37 @@
+const fs = require('fs')
+const path = require('path')
+
+const componentPath = path.resolve(__dirname, '../src/components/variant/FrequencyMap.vue')
+const assetPath = path.resolve(__dirname, '../src/assets/maps/antv-standard-world.svg')
+const rasterPath = path.resolve(__dirname, '../src/assets/maps/antv-standard-world.webp')
+const component = fs.readFileSync(componentPath, 'utf8')
+
+for (const forbidden of ['frequencyMapRuntime', 'antvWorldMap', 'boundaryLines', 'echarts.init', 'progressive: 0']) {
+  if (component.includes(forbidden)) {
+    throw new Error(`Frequency map still contains the blocking runtime path: ${forbidden}`)
+  }
+}
+for (const required of ['requestAnimationFrame', 'translate3d', 'pointerdown', 'wheel', 'antv-standard-world.webp']) {
+  if (!component.includes(required)) {
+    throw new Error(`Frequency map is missing the persistent interaction path: ${required}`)
+  }
+}
+if (!fs.existsSync(assetPath)) {
+  throw new Error('The pre-rendered AntV standard world map is missing.')
+}
+if (!fs.existsSync(rasterPath)) {
+  throw new Error('The optimized AntV standard world raster is missing.')
+}
+const raster = fs.readFileSync(rasterPath)
+if (raster.length > 500_000 || raster.subarray(0, 4).toString('ascii') !== 'RIFF' ||
+    raster.subarray(8, 12).toString('ascii') !== 'WEBP') {
+  throw new Error(`The optimized world raster is invalid or too large (${raster.length} bytes).`)
+}
+const asset = fs.readFileSync(assetPath, 'utf8')
+const countries = (asset.match(/class="country"/g) || []).length
+const boundaryLayers = (asset.match(/class="boundary /g) || []).length
+if (countries < 240 || boundaryLayers !== 8) {
+  throw new Error(`Pre-rendered map is incomplete: ${countries} countries, ${boundaryLayers} boundary layers.`)
+}
+
+console.log(`Validated persistent frequency map with ${countries} countries and ${boundaryLayers} boundary layers.`)

@@ -5,9 +5,11 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "build:cpc-dev": "npm run validate:map && vue-cli-service build --mode cpc-dev && npm run validate:bundle",
-    "build:cpc-prod": "npm run validate:map && vue-cli-service build --mode cpc-prod && npm run validate:bundle",
+    "build:cpc-dev": "npm run validate:map && npm run validate:frequency-map && vue-cli-service build --mode cpc-dev && npm run validate:bundle",
+    "build:cpc-prod": "npm run validate:map && npm run validate:frequency-map && vue-cli-service build --mode cpc-prod && npm run validate:bundle",
+    "generate:frequency-map": "node scripts/generate-frequency-map-base.js",
     "validate:map": "node scripts/validate-world-map.js",
+    "validate:frequency-map": "node scripts/validate-frequency-map-performance.js",
     "validate:bundle": "node scripts/validate-initial-bundle.js",
     "lint": "vue-cli-service lint"
   },

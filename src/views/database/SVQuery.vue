@@ -97,7 +97,7 @@
       </div>
     </div>
 
-    <div v-if="loading" class="loading">
+    <div v-if="loading && !frequency" class="loading">
       <div class="spinner"></div>
       <span>Loading data...</span>
     </div>
@@ -106,20 +106,20 @@
       <p>{{ error }}</p>
     </div>
 
-    <template v-if="searched && !loading">
-      <div v-if="frequencyLoading" class="loading">
+    <template v-if="searched">
+      <div v-if="frequencyLoading && !frequency" class="loading">
         <div class="spinner"></div>
         <span>Loading population frequencies...</span>
       </div>
       <FrequencyMap
-        v-else-if="frequency"
-        :key="`${frequency.assembly}:${frequency.variantId}`"
+        v-if="frequency"
         ref="frequencyMap"
         :frequency="frequency"
         :preferred-population="queryParams.population"
       />
-      <div v-else-if="frequencyError" class="warning-message">{{ frequencyError }}</div>
+      <div v-else-if="frequencyError && !loading" class="warning-message">{{ frequencyError }}</div>
 
+      <template v-if="!loading">
       <div v-if="results && results.length > 0" class="results-section">
         <div class="results-header">
           <h3>SV Query Results</h3>
@@ -187,6 +187,7 @@
       <div v-else class="no-results">
         <p>No results found</p>
       </div>
+      </template>
     </template>
 
     <GenomeBrowserModal
@@ -354,7 +355,6 @@ export default {
 
       this.loading = true
       this.error = null
-      this.frequency = null
       this.frequencyError = ''
       this.searched = true
 
@@ -373,6 +373,7 @@ export default {
           await this.selectVariant(initialVariant)
         } else {
           this.selectedVariant = this.results[0] || null
+          this.frequency = null
           if (this.results.length > 0) {
             this.frequencyError = 'Population frequencies are not available for the variants on this page.'
           }
@@ -381,6 +382,7 @@ export default {
         this.results = []
         this.total = 0
         this.selectedVariant = null
+        this.frequency = null
         this.error = (error.response && error.response.data && error.response.data.message) || 'Failed to search SV data. Please try again.'
       } finally {
         this.loading = false
@@ -389,7 +391,6 @@ export default {
     async selectVariant(variant) {
       if (!variant || !variant.frequencyAvailable) return
       this.selectedVariant = variant
-      this.frequency = null
       this.frequencyError = ''
       const requestId = ++this.frequencyRequestId
       this.frequencyLoading = true
@@ -401,6 +402,7 @@ export default {
         if (requestId === this.frequencyRequestId) this.frequency = response.data
       } catch (error) {
         if (requestId === this.frequencyRequestId) {
+          this.frequency = null
           this.frequencyError = (error.response && error.response.data && error.response.data.message) || 'Population frequencies are unavailable for this SV.'
         }
       } finally {

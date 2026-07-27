@@ -91,7 +91,7 @@
       </div>
     </div>
 
-    <div v-if="loading" class="loading">
+    <div v-if="loading && !frequency" class="loading">
       <div class="spinner"></div>
       <span>Loading data...</span>
     </div>
@@ -100,19 +100,19 @@
       {{ errorMessage }}
     </div>
 
-    <template v-if="searched && !loading">
-      <div v-if="frequencyLoading" class="loading">
+    <template v-if="searched">
+      <div v-if="frequencyLoading && !frequency" class="loading">
         <div class="spinner"></div>
         <span>Loading population frequencies...</span>
       </div>
       <FrequencyMap
-        v-else-if="frequency"
-        :key="`${frequency.assembly}:${frequency.variantId}`"
+        v-if="frequency"
         ref="frequencyMap"
         :frequency="frequency"
       />
-      <div v-else-if="frequencyError" class="warning-message">{{ frequencyError }}</div>
+      <div v-else-if="frequencyError && !loading" class="warning-message">{{ frequencyError }}</div>
 
+      <template v-if="!loading">
       <div v-if="results && results.length > 0" class="results-section">
         <div class="results-header">
           <h3>Query Results (Total: {{ total }})</h3>
@@ -169,6 +169,7 @@
       <div v-else class="no-results">
         No SNPs found matching your criteria.
       </div>
+      </template>
     </template>
 
     <GenomeBrowserModal
@@ -290,7 +291,6 @@ export default {
 
       this.loading = true
       this.errorMessage = ''
-      this.frequency = null
       this.frequencyError = ''
       this.searched = true
 
@@ -311,11 +311,13 @@ export default {
           await this.selectVariant(this.results[0])
         } else {
           this.selectedVariant = null
+          this.frequency = null
         }
       } catch (error) {
         this.results = []
         this.total = 0
         this.selectedVariant = null
+        this.frequency = null
         this.errorMessage = (error.response && error.response.data && error.response.data.message) || 'Failed to query SNP data.'
       } finally {
         this.loading = false
@@ -324,7 +326,6 @@ export default {
     async selectVariant(variant) {
       if (!variant) return
       this.selectedVariant = variant
-      this.frequency = null
       this.frequencyError = ''
       const requestId = ++this.frequencyRequestId
       this.frequencyLoading = true
@@ -338,6 +339,7 @@ export default {
         if (requestId === this.frequencyRequestId) this.frequency = response.data
       } catch (error) {
         if (requestId === this.frequencyRequestId) {
+          this.frequency = null
           this.frequencyError = (error.response && error.response.data && error.response.data.message) || 'Population frequencies are unavailable for this SNP.'
         }
       } finally {
