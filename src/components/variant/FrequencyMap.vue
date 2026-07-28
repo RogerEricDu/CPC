@@ -115,6 +115,7 @@ import worldMapFallbackUrl from '@/assets/maps/antv-standard-world.svg'
 
 const WORLD_WIDTH = 2048
 const WORLD_HEIGHT = 2048
+const INITIAL_CENTER_LATITUDE = 15
 const MAX_ZOOM = 4
 let preloadedWorldMap = null
 
@@ -346,7 +347,7 @@ export default {
       const baseScale = Math.max(width / WORLD_WIDTH, height / WORLD_HEIGHT)
       let scale = baseScale
       let centerWorldX = WORLD_WIDTH / 2
-      let centerWorldY = WORLD_HEIGHT / 2
+      let centerWorldY = project(0, INITIAL_CENTER_LATITUDE).y
 
       if (!reset && previous.width && previous.height && previousView.scale) {
         centerWorldX = (previous.width / 2 - previousView.x) / previousView.scale

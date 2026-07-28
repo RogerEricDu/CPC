@@ -18,7 +18,9 @@ for (const required of [
   'wheel',
   'antv-standard-world.webp',
   'antv-standard-world.svg',
-  'worldMapFallbackUrl'
+  'worldMapFallbackUrl',
+  'INITIAL_CENTER_LATITUDE',
+  'project(0, INITIAL_CENTER_LATITUDE).y'
 ]) {
   if (!component.includes(required)) {
     throw new Error(`Frequency map is missing the persistent interaction path: ${required}`)
