@@ -1,29 +1,12 @@
 <template>
   <div class="sv-query">
     <div class="query-form">
-      <div class="form-row reference-row">
-        <ReferenceGenomeSwitch
-          :value="queryParams.assembly"
-          :assemblies="assemblies"
-          :disabled="loading"
-          @change="selectAssembly"
-        />
-
-        <div class="form-group">
-          <label for="svPopulation">Population:</label>
-          <select
-            id="svPopulation"
-            v-model="queryParams.population"
-            class="form-select"
-            :disabled="loading || populationsLoading"
-          >
-            <option value="">All Populations</option>
-            <option v-for="population in populations" :key="population.id" :value="population.id">
-              {{ population.label }}
-            </option>
-          </select>
-        </div>
-      </div>
+      <ReferenceGenomeSwitch
+        :value="queryParams.assembly"
+        :assemblies="assemblies"
+        :disabled="loading"
+        @change="selectAssembly"
+      />
 
       <div class="form-row">
         <div class="form-group">
@@ -82,6 +65,21 @@
           :placeholder="svIdPlaceholder"
           class="form-input"
         >
+      </div>
+
+      <div class="form-group">
+        <label for="svPopulation">Population:</label>
+        <select
+          id="svPopulation"
+          v-model="queryParams.population"
+          class="form-select"
+          :disabled="loading || populationsLoading"
+        >
+          <option value="">All Populations</option>
+          <option v-for="population in populations" :key="population.id" :value="population.id">
+            {{ population.label }}
+          </option>
+        </select>
       </div>
 
       <div class="form-actions">
@@ -476,10 +474,6 @@ export default {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-}
-
-.reference-row {
-  align-items: end;
 }
 
 .form-actions {

@@ -618,13 +618,13 @@ export default {
 
 .map-stage {
   position: relative;
-  min-height: 500px;
 }
 
 .map-viewport {
   position: relative;
   width: 100%;
-  height: 500px;
+  height: auto;
+  aspect-ratio: 2 / 1;
   overflow: hidden;
   border: 1px solid #dbe3ed;
   border-radius: 9px;
@@ -839,11 +839,6 @@ export default {
   .heading-actions { flex-direction: column; }
   .heading-actions { align-items: flex-start; gap: 12px; }
   .global-frequency { align-items: flex-start; }
-}
-
-@media (max-width: 760px) {
-  .map-stage { min-height: 390px; }
-  .map-viewport { height: 390px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
