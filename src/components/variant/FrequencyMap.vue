@@ -118,51 +118,15 @@
 
 <script>
 import worldMapRasterUrl from '@/assets/maps/antv-standard-world.webp'
-import worldMapVectorUrl from '@/assets/maps/antv-standard-world.svg'
+import worldMapVectorSource from '@/assets/maps/antv-standard-world.svg?source'
 
 const WORLD_WIDTH = 2048
 const WORLD_HEIGHT = 2048
 const INITIAL_CENTER_LATITUDE = 15
 const MAX_ZOOM = 16
-let preloadedWorldMap = null
-let worldMapVectorPromise = null
-
-function preloadWorldMap() {
-  if (preloadedWorldMap || typeof window === 'undefined' || !window.Image) return
-  preloadedWorldMap = new window.Image()
-  preloadedWorldMap.decoding = 'async'
-  preloadedWorldMap.src = worldMapRasterUrl
-  if (typeof preloadedWorldMap.decode === 'function') {
-    preloadedWorldMap.decode().catch(() => {})
-  }
-}
-
-function loadWorldMapVector() {
-  if (worldMapVectorPromise) return worldMapVectorPromise
-  if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
-    return Promise.reject(new Error('Vector map loading is unavailable.'))
-  }
-  worldMapVectorPromise = window.fetch(worldMapVectorUrl, { credentials: 'same-origin' })
-    .then(response => {
-      if (!response.ok) throw new Error(`Unable to load vector map (${response.status}).`)
-      return response.text()
-    })
-    .then(source => {
-      const markup = source.replace(/^<\?xml[^>]*>\s*/i, '')
-      if (!markup.startsWith('<svg') || !markup.includes('class="country"')) {
-        throw new Error('The vector map asset is invalid.')
-      }
-      return markup
-    })
-    .catch(error => {
-      worldMapVectorPromise = null
-      throw error
-    })
-  return worldMapVectorPromise
-}
-
-preloadWorldMap()
-loadWorldMapVector().catch(() => {})
+const bundledWorldMapSvg = worldMapVectorSource.replace(/^<\?xml[^>]*>\s*/i, '')
+const hasBundledVectorMap = bundledWorldMapSvg.startsWith('<svg') &&
+  bundledWorldMapSvg.includes('class="country"')
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value))
@@ -205,11 +169,11 @@ export default {
   data() {
     return {
       worldMapRasterUrl,
-      worldMapSvg: '',
+      worldMapSvg: hasBundledVectorMap ? bundledWorldMapSvg : '',
       displayMode: this.preferredPopulation ? 'population' : 'continent',
-      imageLoaded: false,
+      imageLoaded: hasBundledVectorMap,
       rasterMapFailed: false,
-      vectorMapFailed: false,
+      vectorMapFailed: !hasBundledVectorMap,
       mapError: '',
       dragging: false,
       hoveredKey: '',
@@ -306,7 +270,6 @@ export default {
       this._resizeObserver = new ResizeObserver(this.scheduleResize)
       this._resizeObserver.observe(this.$refs.viewport)
     }
-    this.initializeVectorMap()
     this.$nextTick(() => this.measureViewport(true))
   },
   beforeDestroy() {
@@ -317,21 +280,6 @@ export default {
     if (this._wheelFrame) cancelAnimationFrame(this._wheelFrame)
   },
   methods: {
-    async initializeVectorMap() {
-      try {
-        const markup = await loadWorldMapVector()
-        const shouldReset = !this.imageLoaded
-        this.worldMapSvg = markup
-        this.vectorMapFailed = false
-        this.imageLoaded = true
-        this.mapError = ''
-        await this.$nextTick()
-        this.measureViewport(shouldReset)
-      } catch {
-        this.vectorMapFailed = true
-        if (this.rasterMapFailed) this.mapError = 'Unable to load the frequency map.'
-      }
-    },
     hasCoordinate(value) {
       return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
     },

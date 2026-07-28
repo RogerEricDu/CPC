@@ -4,7 +4,9 @@ const path = require('path')
 const componentPath = path.resolve(__dirname, '../src/components/variant/FrequencyMap.vue')
 const assetPath = path.resolve(__dirname, '../src/assets/maps/antv-standard-world.svg')
 const rasterPath = path.resolve(__dirname, '../src/assets/maps/antv-standard-world.webp')
+const webpackConfigPath = path.resolve(__dirname, '../vue.config.js')
 const component = fs.readFileSync(componentPath, 'utf8')
+const webpackConfig = fs.readFileSync(webpackConfigPath, 'utf8')
 
 for (const forbidden of ['frequencyMapRuntime', 'antvWorldMap', 'boundaryLines', 'echarts.init', 'progressive: 0']) {
   if (component.includes(forbidden)) {
@@ -17,9 +19,10 @@ for (const required of [
   'pointerdown',
   'wheel',
   'worldMapRasterUrl',
-  'worldMapVectorUrl',
+  'worldMapVectorSource',
   'worldMapSvg',
-  'loadWorldMapVector',
+  'antv-standard-world.svg?source',
+  'hasBundledVectorMap',
   '@pointerenter="showTooltip(item, $event)"',
   "layer.style.setProperty('--country-stroke'",
   "layer.style.setProperty('--boundary-primary-stroke'",
@@ -51,6 +54,12 @@ if (!fs.existsSync(assetPath)) {
 }
 if (!fs.existsSync(rasterPath)) {
   throw new Error('The optimized AntV standard world raster is missing.')
+}
+if (!webpackConfig.includes("oneOf('source')") || !webpackConfig.includes("type('asset/source')")) {
+  throw new Error('The build-time inline vector map rule is missing.')
+}
+if (component.includes('window.fetch(worldMapVectorUrl')) {
+  throw new Error('The interactive vector map must not wait for a separate uncompressed SVG request.')
 }
 const raster = fs.readFileSync(rasterPath)
 if (raster.length > 500_000 || raster.subarray(0, 4).toString('ascii') !== 'RIFF' ||
