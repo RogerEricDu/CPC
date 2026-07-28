@@ -84,7 +84,7 @@ const svg = [
   '<?xml version="1.0" encoding="UTF-8"?>',
   `<svg xmlns="http://www.w3.org/2000/svg" width="${rasterWidth}" height="${rasterHeight}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`,
   `<metadata>${metadata}</metadata>`,
-  '<style>.country{fill:#e9eef5;stroke:#b7c2cf;stroke-width:.55;stroke-linejoin:round;fill-rule:evenodd}.boundary{fill:none;stroke-linecap:round;stroke-linejoin:round}.boundary-primary{stroke:#738399;stroke-width:.9}.boundary-secondary{stroke:#9aa8b8;stroke-width:.65;stroke-dasharray:2.4 1.8}</style>',
+  '<style>.country{fill:#e9eef5;stroke:#b7c2cf;stroke-width:var(--country-stroke,.55);stroke-linejoin:round;fill-rule:evenodd;vector-effect:non-scaling-stroke;transition:fill 120ms ease-out,stroke 120ms ease-out}.country:hover{fill:#dce6f2;stroke:#7f91a7}.boundary{fill:none;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;vector-effect:non-scaling-stroke}.boundary-primary{stroke:#738399;stroke-width:var(--boundary-primary-stroke,.9)}.boundary-secondary{stroke:#9aa8b8;stroke-width:var(--boundary-secondary-stroke,.65);stroke-dasharray:var(--boundary-secondary-dash,2.4 1.8)}</style>',
   `<rect width="${width}" height="${height}" fill="#f8fafc"/>`,
   `<g id="countries">${countryPaths}</g>`,
   `<g id="standard-boundaries">${boundaryPaths}</g>`,

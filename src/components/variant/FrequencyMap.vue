@@ -42,9 +42,16 @@
         @keydown="handleKeydown"
       >
         <div ref="worldLayer" class="world-layer">
+          <div
+            v-if="worldMapSvg"
+            class="world-map-vector"
+            aria-hidden="true"
+            v-html="worldMapSvg"
+          ></div>
           <img
+            v-else
             class="world-map-image"
-            :src="worldMapUrl"
+            :src="worldMapRasterUrl"
             width="2048"
             height="2048"
             decoding="async"
@@ -110,26 +117,52 @@
 </template>
 
 <script>
-import worldMapUrl from '@/assets/maps/antv-standard-world.webp'
-import worldMapFallbackUrl from '@/assets/maps/antv-standard-world.svg'
+import worldMapRasterUrl from '@/assets/maps/antv-standard-world.webp'
+import worldMapVectorUrl from '@/assets/maps/antv-standard-world.svg'
 
 const WORLD_WIDTH = 2048
 const WORLD_HEIGHT = 2048
 const INITIAL_CENTER_LATITUDE = 15
-const MAX_ZOOM = 4
+const MAX_ZOOM = 16
 let preloadedWorldMap = null
+let worldMapVectorPromise = null
 
 function preloadWorldMap() {
   if (preloadedWorldMap || typeof window === 'undefined' || !window.Image) return
   preloadedWorldMap = new window.Image()
   preloadedWorldMap.decoding = 'async'
-  preloadedWorldMap.src = worldMapUrl
+  preloadedWorldMap.src = worldMapRasterUrl
   if (typeof preloadedWorldMap.decode === 'function') {
     preloadedWorldMap.decode().catch(() => {})
   }
 }
 
+function loadWorldMapVector() {
+  if (worldMapVectorPromise) return worldMapVectorPromise
+  if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
+    return Promise.reject(new Error('Vector map loading is unavailable.'))
+  }
+  worldMapVectorPromise = window.fetch(worldMapVectorUrl, { credentials: 'same-origin' })
+    .then(response => {
+      if (!response.ok) throw new Error(`Unable to load vector map (${response.status}).`)
+      return response.text()
+    })
+    .then(source => {
+      const markup = source.replace(/^<\?xml[^>]*>\s*/i, '')
+      if (!markup.startsWith('<svg') || !markup.includes('class="country"')) {
+        throw new Error('The vector map asset is invalid.')
+      }
+      return markup
+    })
+    .catch(error => {
+      worldMapVectorPromise = null
+      throw error
+    })
+  return worldMapVectorPromise
+}
+
 preloadWorldMap()
+loadWorldMapVector().catch(() => {})
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value))
@@ -171,10 +204,12 @@ export default {
   },
   data() {
     return {
-      worldMapUrl,
+      worldMapRasterUrl,
+      worldMapSvg: '',
       displayMode: this.preferredPopulation ? 'population' : 'continent',
       imageLoaded: false,
-      mapFallbackAttempted: false,
+      rasterMapFailed: false,
+      vectorMapFailed: false,
       mapError: '',
       dragging: false,
       hoveredKey: '',
@@ -271,6 +306,7 @@ export default {
       this._resizeObserver = new ResizeObserver(this.scheduleResize)
       this._resizeObserver.observe(this.$refs.viewport)
     }
+    this.initializeVectorMap()
     this.$nextTick(() => this.measureViewport(true))
   },
   beforeDestroy() {
@@ -281,6 +317,21 @@ export default {
     if (this._wheelFrame) cancelAnimationFrame(this._wheelFrame)
   },
   methods: {
+    async initializeVectorMap() {
+      try {
+        const markup = await loadWorldMapVector()
+        const shouldReset = !this.imageLoaded
+        this.worldMapSvg = markup
+        this.vectorMapFailed = false
+        this.imageLoaded = true
+        this.mapError = ''
+        await this.$nextTick()
+        this.measureViewport(shouldReset)
+      } catch {
+        this.vectorMapFailed = true
+        if (this.rasterMapFailed) this.mapError = 'Unable to load the frequency map.'
+      }
+    },
     hasCoordinate(value) {
       return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
     },
@@ -321,12 +372,8 @@ export default {
     },
     handleMapError() {
       this.imageLoaded = false
-      if (!this.mapFallbackAttempted) {
-        this.mapFallbackAttempted = true
-        this.worldMapUrl = worldMapFallbackUrl
-        return
-      }
-      this.mapError = 'Unable to load the frequency map.'
+      this.rasterMapFailed = true
+      if (this.vectorMapFailed) this.mapError = 'Unable to load the frequency map.'
     },
     scheduleResize() {
       if (this._resizeFrame) cancelAnimationFrame(this._resizeFrame)
@@ -381,8 +428,13 @@ export default {
       this._view = view
       const layer = this.$refs.worldLayer
       if (!layer) return
+      const relativeScale = view.scale / view.baseScale
       layer.style.transform = `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})`
       layer.style.setProperty('--marker-scale', String(1 / view.scale))
+      layer.style.setProperty('--country-stroke', String(0.55 / relativeScale))
+      layer.style.setProperty('--boundary-primary-stroke', String(0.9 / relativeScale))
+      layer.style.setProperty('--boundary-secondary-stroke', String(0.65 / relativeScale))
+      layer.style.setProperty('--boundary-secondary-dash', `${2.4 / relativeScale} ${1.8 / relativeScale}`)
     },
     resetView() {
       this.hideTooltip()
@@ -658,14 +710,20 @@ export default {
   width: 2048px;
   height: 2048px;
   transform-origin: 0 0;
-  will-change: transform;
-  backface-visibility: hidden;
 }
 
+.world-map-vector,
 .world-map-image {
   display: block;
   width: 2048px;
   height: 2048px;
+}
+
+.world-map-vector {
+  line-height: 0;
+}
+
+.world-map-image {
   pointer-events: none;
   -webkit-user-drag: none;
 }
@@ -718,7 +776,7 @@ export default {
 
 .frequency-marker.hovered .frequency-ring,
 .frequency-ring:focus-visible {
-  transform: scale(1.18);
+  transform: scale(1.28);
   box-shadow: 0 5px 15px rgba(25, 48, 82, 0.34);
   outline: none;
 }

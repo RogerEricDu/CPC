@@ -16,15 +16,23 @@ for (const required of [
   'translate3d',
   'pointerdown',
   'wheel',
-  'antv-standard-world.webp',
-  'antv-standard-world.svg',
-  'worldMapFallbackUrl',
+  'worldMapRasterUrl',
+  'worldMapVectorUrl',
+  'worldMapSvg',
+  'loadWorldMapVector',
+  '@pointerenter="showTooltip(item, $event)"',
+  "layer.style.setProperty('--country-stroke'",
+  "layer.style.setProperty('--boundary-primary-stroke'",
   'INITIAL_CENTER_LATITUDE',
   'project(0, INITIAL_CENTER_LATITUDE).y'
 ]) {
   if (!component.includes(required)) {
     throw new Error(`Frequency map is missing the persistent interaction path: ${required}`)
   }
+}
+const maximumZoom = Number((component.match(/const MAX_ZOOM = (\d+)/) || [])[1])
+if (!Number.isFinite(maximumZoom) || maximumZoom < 16) {
+  throw new Error(`Frequency map maximum zoom is too restrictive (${maximumZoom || 'missing'}).`)
 }
 for (const required of [
   'const WORLD_WIDTH = 2048',
@@ -52,6 +60,17 @@ if (raster.length > 500_000 || raster.subarray(0, 4).toString('ascii') !== 'RIFF
 const asset = fs.readFileSync(assetPath, 'utf8')
 if (!asset.includes('width="2048" height="2048" viewBox="0 0 2048 2048"')) {
   throw new Error('The pre-rendered Web Mercator map does not use a square logical canvas.')
+}
+for (const required of [
+  '.country:hover',
+  'vector-effect:non-scaling-stroke',
+  'pointer-events:none',
+  'var(--country-stroke,.55)',
+  'var(--boundary-primary-stroke,.9)'
+]) {
+  if (!asset.includes(required)) {
+    throw new Error(`The interactive vector map is missing: ${required}`)
+  }
 }
 const countries = (asset.match(/class="country"/g) || []).length
 const boundaryLayers = (asset.match(/class="boundary /g) || []).length
