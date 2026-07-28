@@ -7,8 +7,8 @@ const PbfModule = require('pbf')
 const Pbf = PbfModule.default || PbfModule
 const width = 2048
 const height = 2048
-const rasterWidth = 4096
-const rasterHeight = 4096
+const rasterWidth = 2048
+const rasterHeight = 2048
 const sourceDirectory = path.resolve(__dirname, '../public/maps')
 const outputPath = path.resolve(__dirname, '../src/assets/maps/antv-standard-world.svg')
 

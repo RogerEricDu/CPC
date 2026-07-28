@@ -111,6 +111,7 @@
 
 <script>
 import worldMapUrl from '@/assets/maps/antv-standard-world.webp'
+import worldMapFallbackUrl from '@/assets/maps/antv-standard-world.svg'
 
 const WORLD_WIDTH = 2048
 const WORLD_HEIGHT = 2048
@@ -172,6 +173,7 @@ export default {
       worldMapUrl,
       displayMode: this.preferredPopulation ? 'population' : 'continent',
       imageLoaded: false,
+      mapFallbackAttempted: false,
       mapError: '',
       dragging: false,
       hoveredKey: '',
@@ -318,6 +320,11 @@ export default {
     },
     handleMapError() {
       this.imageLoaded = false
+      if (!this.mapFallbackAttempted) {
+        this.mapFallbackAttempted = true
+        this.worldMapUrl = worldMapFallbackUrl
+        return
+      }
       this.mapError = 'Unable to load the frequency map.'
     },
     scheduleResize() {

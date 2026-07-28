@@ -11,7 +11,15 @@ for (const forbidden of ['frequencyMapRuntime', 'antvWorldMap', 'boundaryLines',
     throw new Error(`Frequency map still contains the blocking runtime path: ${forbidden}`)
   }
 }
-for (const required of ['requestAnimationFrame', 'translate3d', 'pointerdown', 'wheel', 'antv-standard-world.webp']) {
+for (const required of [
+  'requestAnimationFrame',
+  'translate3d',
+  'pointerdown',
+  'wheel',
+  'antv-standard-world.webp',
+  'antv-standard-world.svg',
+  'worldMapFallbackUrl'
+]) {
   if (!component.includes(required)) {
     throw new Error(`Frequency map is missing the persistent interaction path: ${required}`)
   }
@@ -40,7 +48,7 @@ if (raster.length > 500_000 || raster.subarray(0, 4).toString('ascii') !== 'RIFF
   throw new Error(`The optimized world raster is invalid or too large (${raster.length} bytes).`)
 }
 const asset = fs.readFileSync(assetPath, 'utf8')
-if (!asset.includes('width="4096" height="4096" viewBox="0 0 2048 2048"')) {
+if (!asset.includes('width="2048" height="2048" viewBox="0 0 2048 2048"')) {
   throw new Error('The pre-rendered Web Mercator map does not use a square logical canvas.')
 }
 const countries = (asset.match(/class="country"/g) || []).length
