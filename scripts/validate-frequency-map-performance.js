@@ -16,6 +16,18 @@ for (const required of ['requestAnimationFrame', 'translate3d', 'pointerdown', '
     throw new Error(`Frequency map is missing the persistent interaction path: ${required}`)
   }
 }
+for (const required of [
+  'const WORLD_WIDTH = 2048',
+  'const WORLD_HEIGHT = 2048',
+  'Math.max(width / WORLD_WIDTH, height / WORLD_HEIGHT)'
+]) {
+  if (!component.includes(required)) {
+    throw new Error(`Frequency map is missing the undistorted Web Mercator path: ${required}`)
+  }
+}
+if (component.includes('aspect-ratio: 2 / 1')) {
+  throw new Error('Frequency map must not force a 2:1 viewport onto Web Mercator geometry.')
+}
 if (!fs.existsSync(assetPath)) {
   throw new Error('The pre-rendered AntV standard world map is missing.')
 }
@@ -28,6 +40,9 @@ if (raster.length > 500_000 || raster.subarray(0, 4).toString('ascii') !== 'RIFF
   throw new Error(`The optimized world raster is invalid or too large (${raster.length} bytes).`)
 }
 const asset = fs.readFileSync(assetPath, 'utf8')
+if (!asset.includes('width="4096" height="4096" viewBox="0 0 2048 2048"')) {
+  throw new Error('The pre-rendered Web Mercator map does not use a square logical canvas.')
+}
 const countries = (asset.match(/class="country"/g) || []).length
 const boundaryLayers = (asset.match(/class="boundary /g) || []).length
 if (countries < 240 || boundaryLayers !== 8) {

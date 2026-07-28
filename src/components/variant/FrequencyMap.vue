@@ -46,7 +46,7 @@
             class="world-map-image"
             :src="worldMapUrl"
             width="2048"
-            height="1024"
+            height="2048"
             decoding="async"
             alt=""
             draggable="false"
@@ -113,7 +113,7 @@
 import worldMapUrl from '@/assets/maps/antv-standard-world.webp'
 
 const WORLD_WIDTH = 2048
-const WORLD_HEIGHT = 1024
+const WORLD_HEIGHT = 2048
 const MAX_ZOOM = 4
 let preloadedWorldMap = null
 
@@ -336,7 +336,7 @@ export default {
 
       const previous = this._viewportSize
       const previousView = this._view
-      const baseScale = Math.min(width / WORLD_WIDTH, height / WORLD_HEIGHT)
+      const baseScale = Math.max(width / WORLD_WIDTH, height / WORLD_HEIGHT)
       let scale = baseScale
       let centerWorldX = WORLD_WIDTH / 2
       let centerWorldY = WORLD_HEIGHT / 2
@@ -618,13 +618,13 @@ export default {
 
 .map-stage {
   position: relative;
+  min-height: 500px;
 }
 
 .map-viewport {
   position: relative;
   width: 100%;
-  height: auto;
-  aspect-ratio: 2 / 1;
+  height: 500px;
   overflow: hidden;
   border: 1px solid #dbe3ed;
   border-radius: 9px;
@@ -648,7 +648,7 @@ export default {
   top: 0;
   left: 0;
   width: 2048px;
-  height: 1024px;
+  height: 2048px;
   transform-origin: 0 0;
   will-change: transform;
   backface-visibility: hidden;
@@ -657,7 +657,7 @@ export default {
 .world-map-image {
   display: block;
   width: 2048px;
-  height: 1024px;
+  height: 2048px;
   pointer-events: none;
   -webkit-user-drag: none;
 }
@@ -839,6 +839,11 @@ export default {
   .heading-actions { flex-direction: column; }
   .heading-actions { align-items: flex-start; gap: 12px; }
   .global-frequency { align-items: flex-start; }
+}
+
+@media (max-width: 760px) {
+  .map-stage { min-height: 390px; }
+  .map-viewport { height: 390px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
