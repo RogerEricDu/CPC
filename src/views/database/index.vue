@@ -68,6 +68,14 @@
         <i class="nav-icon">🔀</i>
         PanGraph
       </button>
+      <button
+        class="nav-btn"
+        :class="{ active: activeTab === 'tube-map' }"
+        @click="selectTab('tube-map')"
+      >
+        <i class="nav-icon">◎</i>
+        Sequence Tube Map
+      </button>
     </div>
 
     <!-- 内容区域 -->
@@ -83,6 +91,7 @@
         <SVQuery v-if="activeTab === 'sv'" />
         <ImputationTool v-if="activeTab === 'imputation'" />
         <Pangraph v-if="activeTab === 'pangraph'" />
+        <SequenceTubeMap v-if="activeTab === 'tube-map'" />
       </template>
     </div>
   </div>
@@ -95,8 +104,9 @@ const SNPQuery = () => import(/* webpackChunkName: "database-snp" */ './SNPQuery
 const SVQuery = () => import(/* webpackChunkName: "database-sv" */ './SVQuery.vue')
 const ImputationTool = () => import(/* webpackChunkName: "database-imputation" */ './ImputationTool.vue')
 const Pangraph = () => import(/* webpackChunkName: "database-pangraph" */ './Pangraph.vue')
+const SequenceTubeMap = () => import(/* webpackChunkName: "database-sequence-tube-map" */ './SequenceTubeMap.vue')
 
-const DATABASE_TABS = ['snp', 'sv', 'imputation', 'pangraph']
+const DATABASE_TABS = ['snp', 'sv', 'imputation', 'pangraph', 'tube-map']
 
 export default {
   name: 'DatabasePortal',
@@ -104,7 +114,8 @@ export default {
     SNPQuery,
     SVQuery,
     ImputationTool,
-    Pangraph
+    Pangraph,
+    SequenceTubeMap
   },
   data() {
     const queryTab = String(this.$route.query.tab || '').toLowerCase()
@@ -333,9 +344,10 @@ export default {
 /* 导航标签样式优化 */
 .database-nav {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   margin: 20px auto 40px auto;
-  max-width: 1000px;
+  max-width: 1180px;
   background: white;
   padding: 20px;
   border-radius: 20px;
