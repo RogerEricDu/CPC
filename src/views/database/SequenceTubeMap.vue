@@ -716,7 +716,17 @@ export default {
   font-weight: 650;
 }
 
-.section-heading h2 { font-size: 1.55rem; }
+.section-heading h2 {
+  height: auto;
+  margin: 0 0 6px;
+  border-radius: 0;
+  background: transparent;
+  color: #2b4275;
+  font-size: 1.55rem;
+  line-height: 1.25;
+}
+
+.section-heading h2::before { display: none; }
 .section-heading h3,
 .result-heading h3 { font-size: 1.3rem; }
 .section-heading p,
