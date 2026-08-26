@@ -468,11 +468,17 @@ export default {
       return verified ? 'verified' : 'unverified'
     },
     requestedContentLabel(value) {
-      return {
+      const labels = {
         CPC_PHASE_I: 'CPC Phase I',
         CPC_PHASE_II: 'CPC Phase II',
         DATABASE: 'Database functions'
-      }[value] || value
+      }
+      return String(value)
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean)
+        .map(item => labels[item] || item)
+        .join(', ')
     },
     formatDate(value) {
       return value ? new Date(value).toLocaleString() : '-'

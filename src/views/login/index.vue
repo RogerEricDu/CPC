@@ -31,18 +31,27 @@
           <input v-model.trim="institution" maxlength="255">
         </label>
 
-        <label v-if="registerMode">
-          Requested CPC content
-          <select v-model="requestedContent" required>
-            <option disabled value="">Select the content you require</option>
-            <option value="CPC_PHASE_I">CPC Phase I</option>
-            <option value="CPC_PHASE_II">CPC Phase II</option>
-            <option value="DATABASE">CPC Database functions</option>
-          </select>
-          <small v-if="requestedContent === 'CPC_PHASE_I'" class="availability-note">
+        <fieldset v-if="registerMode" class="requested-content-fieldset">
+          <legend>Requested CPC content</legend>
+          <small class="selection-note">Select one or more options.</small>
+          <div class="requested-content-options">
+            <label class="requested-content-option">
+              <input v-model="requestedContent" type="checkbox" value="CPC_PHASE_I">
+              <span>CPC Phase I</span>
+            </label>
+            <label class="requested-content-option">
+              <input v-model="requestedContent" type="checkbox" value="CPC_PHASE_II">
+              <span>CPC Phase II</span>
+            </label>
+            <label class="requested-content-option">
+              <input v-model="requestedContent" type="checkbox" value="DATABASE">
+              <span>CPC Database functions</span>
+            </label>
+          </div>
+          <small v-if="requestedContent.includes('CPC_PHASE_I')" class="availability-note">
             CPC Phase I data can be downloaded directly without registering for an account.
           </small>
-        </label>
+        </fieldset>
 
         <label v-if="registerMode">
           Application reason
@@ -104,7 +113,7 @@ export default {
       email: '',
       piEmail: '',
       institution: '',
-      requestedContent: '',
+      requestedContent: [],
       applicationReason: '',
       password: '',
       captchaId: '',
@@ -134,10 +143,13 @@ export default {
       this.error = ''
       this.notice = ''
       try {
-        if (!this.captchaId || !this.captchaCode) {
-          throw new Error('Please enter the verification code.')
-        }
         if (this.registerMode) {
+          if (!this.requestedContent.length) {
+            throw new Error('Please select at least one requested CPC content option.')
+          }
+          if (!this.captchaId || !this.captchaCode) {
+            throw new Error('Please enter the verification code.')
+          }
           await register({
             username: this.username,
             email: this.email || null,
@@ -149,9 +161,10 @@ export default {
             captchaId: this.captchaId,
             captchaCode: this.captchaCode
           })
-          const registrationNotice = this.requestedContent === 'CPC_PHASE_I'
+          const registrationNotice = this.requestedContent.includes('CPC_PHASE_I')
             ? 'Registration submitted. CPC Phase I data can be downloaded without an account; please also check the verification email sent to you.'
             : 'Registration submitted. Verify your email and, if provided, ask your PI to complete their confirmation. An administrator will review the account afterward.'
+          this.requestedContent = []
           this.password = ''
           this.resetCaptcha()
           const redirect = this.$route.query.redirect
@@ -161,6 +174,9 @@ export default {
           })
           this.notice = registrationNotice
           return
+        }
+        if (!this.captchaId || !this.captchaCode) {
+          throw new Error('Please enter the verification code.')
         }
         const response = await login({
           username: this.username,
@@ -254,7 +270,6 @@ label small {
 }
 
 input,
-select,
 textarea {
   width: 100%;
   border: 1px solid #dcdfe6;
@@ -266,6 +281,54 @@ textarea {
 
 textarea {
   resize: vertical;
+}
+
+.requested-content-fieldset {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.requested-content-fieldset legend {
+  margin: 0 0 2px;
+  padding: 0;
+  color: #606266;
+  font-weight: 600;
+}
+
+.selection-note {
+  color: #7a8494;
+  line-height: 1.4;
+}
+
+.requested-content-options {
+  display: grid;
+  gap: 8px;
+}
+
+.requested-content-option {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 9px 11px;
+  border: 1px solid #dcdfe6;
+  border-radius: 5px;
+  color: #303133;
+  cursor: pointer;
+}
+
+.requested-content-option:hover {
+  border-color: #9db0d4;
+  background: #f7f9fd;
+}
+
+.requested-content-option input {
+  width: auto;
+  margin: 0;
+  accent-color: #315aa8;
 }
 
 .availability-note {
