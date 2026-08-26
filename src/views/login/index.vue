@@ -32,6 +32,19 @@
         </label>
 
         <label v-if="registerMode">
+          Requested CPC content
+          <select v-model="requestedContent" required>
+            <option disabled value="">Select the content you require</option>
+            <option value="CPC_PHASE_I">CPC Phase I</option>
+            <option value="CPC_PHASE_II">CPC Phase II</option>
+            <option value="DATABASE">CPC Database functions</option>
+          </select>
+          <small v-if="requestedContent === 'CPC_PHASE_I'" class="availability-note">
+            CPC Phase I data can be downloaded directly without registering for an account.
+          </small>
+        </label>
+
+        <label v-if="registerMode">
           Application reason
           <textarea v-model.trim="applicationReason" rows="4" maxlength="1000" placeholder="Briefly describe your research purpose"></textarea>
         </label>
@@ -91,6 +104,7 @@ export default {
       email: '',
       piEmail: '',
       institution: '',
+      requestedContent: '',
       applicationReason: '',
       password: '',
       captchaId: '',
@@ -129,12 +143,15 @@ export default {
             email: this.email || null,
             piEmail: this.piEmail || null,
             institution: this.institution || null,
+            requestedContent: this.requestedContent,
             applicationReason: this.applicationReason || null,
             password: this.password,
             captchaId: this.captchaId,
             captchaCode: this.captchaCode
           })
-          const registrationNotice = 'Registration submitted. Verify your email and, if provided, ask your PI to complete their confirmation. An administrator will review the account afterward.'
+          const registrationNotice = this.requestedContent === 'CPC_PHASE_I'
+            ? 'Registration submitted. CPC Phase I data can be downloaded without an account; please also check the verification email sent to you.'
+            : 'Registration submitted. Verify your email and, if provided, ask your PI to complete their confirmation. An administrator will review the account afterward.'
           this.password = ''
           this.resetCaptcha()
           const redirect = this.$route.query.redirect
@@ -237,6 +254,7 @@ label small {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid #dcdfe6;
@@ -248,6 +266,11 @@ textarea {
 
 textarea {
   resize: vertical;
+}
+
+.availability-note {
+  color: #1b6e43;
+  font-weight: 600;
 }
 
 .actions {

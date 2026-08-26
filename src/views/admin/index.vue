@@ -21,6 +21,24 @@
     </nav>
 
     <section v-if="activeView === 'accounts'">
+    <form class="notification-settings" @submit.prevent="saveNotificationSettings">
+      <div class="notification-copy">
+        <label for="registration-notification-email">Registration notification email</label>
+        <small>Receive an email when a new CPC account registration is submitted. Leave blank to disable notifications.</small>
+      </div>
+      <input
+        id="registration-notification-email"
+        v-model.trim="notificationSettings.email"
+        type="email"
+        maxlength="191"
+        placeholder="Notification email address"
+      >
+      <button class="btn btn-primary" type="submit" :disabled="notificationSettings.saving">
+        {{ notificationSettings.saving ? 'Saving...' : 'Save' }}
+      </button>
+      <span v-if="notificationSettings.error" class="settings-error">{{ notificationSettings.error }}</span>
+    </form>
+
     <form class="filters" @submit.prevent="searchUsers">
       <input v-model.trim="filters.search" placeholder="Search username, applicant email, PI email, institution">
       <select v-model="filters.accessLevel">
@@ -78,6 +96,7 @@
             <td class="user-cell">
               <strong>{{ user.displayName || user.username }}</strong>
               <small>{{ user.username }} · {{ user.role }}</small>
+              <small v-if="user.requestedContent">Requested: {{ requestedContentLabel(user.requestedContent) }}</small>
             </td>
             <td class="email-cell">
               <span class="address">{{ user.email || '-' }}</span>
@@ -224,9 +243,11 @@ import {
   disableUser,
   enableUser,
   getAdminUsers,
+  getRegistrationNotificationSettings,
   rejectPhase2,
   sendUserEmail,
-  setUserAccessLevel
+  setUserAccessLevel,
+  updateRegistrationNotificationSettings
 } from '@/api/admin'
 import VisitAnalytics from './VisitAnalytics.vue'
 import ImputationAccessReview from './ImputationAccessReview.vue'
@@ -247,6 +268,11 @@ export default {
         accessLevel: '',
         phase2Status: '',
         enabled: ''
+      },
+      notificationSettings: {
+        email: '',
+        saving: false,
+        error: ''
       },
       error: '',
       emailDialog: {
@@ -274,6 +300,7 @@ export default {
   },
   created() {
     this.loadUsers()
+    this.loadNotificationSettings()
   },
   methods: {
     selectView(view) {
@@ -294,7 +321,31 @@ export default {
       if (this.activeView === 'imputation') {
         return this.$refs.imputationReview && this.$refs.imputationReview.loadRequests()
       }
-      return this.loadUsers()
+      return Promise.all([this.loadUsers(), this.loadNotificationSettings()])
+    },
+    async loadNotificationSettings() {
+      this.notificationSettings.error = ''
+      try {
+        const response = await getRegistrationNotificationSettings()
+        this.notificationSettings.email = response.data.notificationEmail || ''
+      } catch (err) {
+        this.notificationSettings.error = err.message || 'Failed to load registration notification settings.'
+      }
+    },
+    async saveNotificationSettings() {
+      this.notificationSettings.error = ''
+      this.notificationSettings.saving = true
+      try {
+        const response = await updateRegistrationNotificationSettings(this.notificationSettings.email)
+        this.notificationSettings.email = response.data.notificationEmail || ''
+        this.$message.success(this.notificationSettings.email
+          ? 'Registration notifications enabled.'
+          : 'Registration notifications disabled.')
+      } catch (err) {
+        this.notificationSettings.error = err.message || 'Failed to save registration notification settings.'
+      } finally {
+        this.notificationSettings.saving = false
+      }
     },
     async loadUsers() {
       this.error = ''
@@ -416,6 +467,13 @@ export default {
     verificationClass(verified) {
       return verified ? 'verified' : 'unverified'
     },
+    requestedContentLabel(value) {
+      return {
+        CPC_PHASE_I: 'CPC Phase I',
+        CPC_PHASE_II: 'CPC Phase II',
+        DATABASE: 'Database functions'
+      }[value] || value
+    },
     formatDate(value) {
       return value ? new Date(value).toLocaleString() : '-'
     }
@@ -489,6 +547,37 @@ p {
   margin-bottom: 16px;
   background: #f8f9fa;
   border-radius: 8px;
+}
+
+.notification-settings {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(260px, 420px) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 0 2px 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.notification-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.notification-copy label {
+  color: #2b4275;
+  font-weight: 700;
+}
+
+.notification-copy small {
+  color: #6b7280;
+  line-height: 1.35;
+}
+
+.settings-error {
+  grid-column: 2 / -1;
+  color: #b42318;
+  font-size: 0.88rem;
 }
 
 input,
@@ -707,6 +796,14 @@ td small.unverified {
 @media (max-width: 900px) {
   .filters {
     grid-template-columns: 1fr;
+  }
+
+  .notification-settings {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-error {
+    grid-column: auto;
   }
 }
 

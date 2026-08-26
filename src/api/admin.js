@@ -8,6 +8,21 @@ export function getAdminUsers(params) {
   })
 }
 
+export function getRegistrationNotificationSettings() {
+  return request({
+    url: '/admin/settings/registration-notifications',
+    method: 'get'
+  })
+}
+
+export function updateRegistrationNotificationSettings(notificationEmail) {
+  return request({
+    url: '/admin/settings/registration-notifications',
+    method: 'put',
+    data: { notificationEmail: notificationEmail || null }
+  })
+}
+
 export function setUserAccessLevel(id, accessLevel) {
   return request({
     url: `/admin/users/${id}/access-level`,
