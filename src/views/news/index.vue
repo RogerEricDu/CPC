@@ -30,6 +30,42 @@ export default {
       listLoading: true,
       newsList: [
         {
+          author: 'Shuhua Xu',
+          publishTime: '2026-09-27',
+          tags: 'Singapore',
+          category: 'Meeting',
+          id: '20260927',
+          title: 'Advancing Asian Pangenomics at Oxford Nanopore APAC Health Summit 2026',
+          content: 'CPC and APC joined the Oxford Nanopore APAC Health Summit 2026 in Singapore, sharing progress and perspectives on scaling pangenomics across Asia.'
+        },
+        {
+          author: 'Shuhua Xu',
+          publishTime: '2026-05-28',
+          tags: 'Beijing',
+          category: 'Meeting',
+          id: '20260528',
+          title: 'Exploring Long-Read Sequencing at Oxford Nanopore WYMM Tour Beijing',
+          content: 'At the Oxford Nanopore WYMM Tour in Beijing, the presentation “Long-read sequencing: why, who to sequence, how long, and how deep?” explored key considerations in designing long-read sequencing studies'
+        },
+        {
+          author: 'Shuhua Xu',
+          publishTime: '2026-05-12',
+          tags: 'Fukuoka, Japan',
+          category: 'Meeting',
+          id: '20260512',
+          title: 'Scaling Asian Pangenomics at PacBio PRISM 2026',
+          content: 'At PacBio APAC PRISM 2026 in Fukuoka, Japan, the presentation “Scaling Pangenomics in Asia: CPC Phase II to APC and the Path toward High-Quality X-omic References” introduced the transition from CPC Phase II toward broader Asian pangenome efforts.'
+        },
+        {
+          author: 'Shuhua Xu',
+          publishTime: '2026-03-25',
+          tags: 'London',
+          category: 'Meeting',
+          id: '20260325',
+          title: 'Scaling Asian Pangenomics at Oxford Nanopore Global Health Summit 2026',
+          content: 'At the Oxford Nanopore Global Health Summit in London, the presentation “Scaling pangenomics in Asia: from population diversity to high-quality X-omic reference frameworks” highlighted efforts to represent Asia’s extensive population diversity through large-scale pangenomics.'
+        }
+        ,{
           author: 'Shaohua Fan',
           publishTime: '2025-02-12',
           tags: 'SVs',
@@ -72,7 +108,7 @@ export default {
               '6.\tEbert, P. et al. Haplotype-resolved diverse human genomes and integrated analysis of structural variation. Science 372, (2021).\n' +
               '\n' +
               'https://www.nature.com/articles/s41467-025-56661-9'
-        },
+        }
 
       ],
       value1: '',

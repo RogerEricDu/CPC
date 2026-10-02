@@ -20,15 +20,55 @@
         <span class="news-tag">{{ news.category }}</span>
       </el-col>
     </el-row>
-    <div :key="$route.fullPath" class="news-main" @click="detailHandler(news.id)">
+<!--    <div :key="$route.fullPath" class="news-main" @click="detailHandler(news.id)">-->
+    <div
+        :key="$route.fullPath"
+        class="news-main"
+        @click="news.category !== 'Meeting' && detailHandler(news.id)"
+    >
       <el-row :gutter="40">
         <el-col :span="news.filepath? 18 : 24">
           <h4 class="news-title">
             {{ news.title }}
           </h4>
+<!--          <p class="news-content">-->
+<!--            {{ formatContent(news.content) }}-->
+<!--          </p>-->
           <p class="news-content">
-            {{ formatContent(news.content) }}
+            {{ news.category === 'Meeting' ? news.content : formatContent(news.content) }}
           </p>
+          <!-- Meeting news images -->
+          <div v-if="news.category === 'Meeting'" class="meeting-images">
+
+            <!-- Singapore, Sep 27 -->
+            <img
+                v-if="news.id === '20260927'"
+                src="@/assets/img/news/260930_speach.jpg"
+                alt="Oxford Nanopore APAC Health Summit 2026"
+            >
+
+            <!-- Beijing, May 28 -->
+            <img
+                v-if="news.id === '20260528'"
+                src="@/assets/img/news/260528_bj.jpg"
+                alt="Oxford Nanopore WYMM Tour Beijing"
+            >
+
+            <!-- Fukuoka, May 12 -->
+            <img
+                v-if="news.id === '20260512'"
+                src="@/assets/img/news/260512_jp.jpg"
+                alt="PacBio PRISM 2026"
+            >
+
+            <!-- London, Mar 25 -->
+            <img
+                v-if="news.id === '20260325'"
+                src="@/assets/img/news/260325_ld.jpg"
+                alt="Oxford Nanopore Global Health Summit 2026"
+            >
+
+          </div>
 <!--          <div class="icon-group">-->
 <!--            <i class="el-icon-view"/><span class="icon-num">{{ news.viewnum }}</span>-->
 <!--            <i class="el-icon-star-off"/><span class="icon-num">{{ news.starnum }}</span>-->
@@ -159,4 +199,16 @@ export default {
   min-height: 100%;
   /* text-align: center; */
 }
+  .meeting-images {
+    margin-top: 16px;
+  }
+
+  .meeting-images img {
+    display: block;
+    width: 100%;
+    max-width: 750px;
+    height: auto;
+    margin-top: 12px;
+  }
+
 </style>
