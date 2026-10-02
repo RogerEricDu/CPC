@@ -1,6 +1,76 @@
 <template>
   <div>
     <div style="max-width: 1200px; padding: 0 10px 20px">
+      <!-- 2026-09-27 Singapore -->
+      <div style="font-size: 20px;font-weight: 600;padding: 10px 0 0">
+        <div style="background-color: #2b4275;border-radius: 5px;padding: 0 0 0;width: fit-content">
+          <p style="color: #ffffff;padding: 5px 10px 5px;">
+            Advancing Asian Pangenomics at Oxford Nanopore APAC Health Summit 2026
+          </p>
+        </div>
+      </div>
+      <p>
+        CPC and APC joined the Oxford Nanopore APAC Health Summit 2026 in Singapore, sharing progress and perspectives on scaling pangenomics across Asia.
+      </p>
+      <div style="display:flex;justify-content:space-between;margin-bottom: 40px;">
+        <img data-aos="fade-right"
+             src="@/assets/img/conference/260930_speach.jpg"
+             style="width:80%;border-radius: 10px;">
+      </div>
+
+
+      <!-- 2026-05-28 Beijing -->
+      <div style="font-size: 20px;font-weight: 600;padding: 10px 0 0">
+        <div style="background-color: #2b4275;border-radius: 5px;padding: 0 0 0;width: fit-content">
+          <p style="color: #ffffff;padding: 5px 10px 5px;">
+            Exploring Long-Read Sequencing at Oxford Nanopore WYMM Tour Beijing
+          </p>
+        </div>
+      </div>
+      <p>
+        At the Oxford Nanopore WYMM Tour in Beijing, the presentation “Long-read sequencing: why, who to sequence, how long, and how deep?” explored key considerations in designing long-read sequencing studies.
+      </p>
+      <div style="display:flex;justify-content:space-between;margin-bottom: 40px;">
+        <img data-aos="fade-right"
+             src="@/assets/img/conference/260528_bj.jpg"
+             style="width:80%;border-radius: 10px;">
+      </div>
+
+
+      <!-- 2026-05-12 Fukuoka -->
+      <div style="font-size: 20px;font-weight: 600;padding: 10px 0 0">
+        <div style="background-color: #2b4275;border-radius: 5px;padding: 0 0 0;width: fit-content">
+          <p style="color: #ffffff;padding: 5px 10px 5px;">
+            Scaling Asian Pangenomics at PacBio PRISM 2026
+          </p>
+        </div>
+      </div>
+      <p>
+        At PacBio APAC PRISM 2026 in Fukuoka, Japan, the presentation “Scaling Pangenomics in Asia: CPC Phase II to APC and the Path toward High-Quality X-omic References” introduced the transition from CPC Phase II toward broader Asian pangenome efforts.
+      </p>
+      <div style="display:flex;justify-content:space-between;margin-bottom: 40px;">
+        <img data-aos="fade-right"
+             src="@/assets/img/conference/260512_jp.jpg"
+             style="width:80%;border-radius: 10px;">
+      </div>
+
+
+      <!-- 2026-03-25 London -->
+      <div style="font-size: 20px;font-weight: 600;padding: 10px 0 0">
+        <div style="background-color: #2b4275;border-radius: 5px;padding: 0 0 0;width: fit-content">
+          <p style="color: #ffffff;padding: 5px 10px 5px;">
+            Scaling Asian Pangenomics at Oxford Nanopore Global Health Summit 2026
+          </p>
+        </div>
+      </div>
+      <p>
+        At the Oxford Nanopore Global Health Summit in London, the presentation “Scaling pangenomics in Asia: from population diversity to high-quality X-omic reference frameworks” highlighted efforts to represent Asia’s extensive population diversity through large-scale pangenomics.
+      </p>
+      <div style="display:flex;justify-content:space-between;margin-bottom: 40px;">
+        <img data-aos="fade-right"
+             src="@/assets/img/conference/260325_ld.jpg"
+             style="width:80%;border-radius: 10px;">
+      </div>
 
       <!--会议五-->
       <div style="font-size: 20px;font-weight: 600;padding: 10px 0 0">
