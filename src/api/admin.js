@@ -8,6 +8,21 @@ export function getAdminUsers(params) {
   })
 }
 
+export function getRegistrationNotificationSettings() {
+  return request({
+    url: '/admin/settings/registration-notifications',
+    method: 'get'
+  })
+}
+
+export function updateRegistrationNotificationSettings(notificationEmail) {
+  return request({
+    url: '/admin/settings/registration-notifications',
+    method: 'put',
+    data: { notificationEmail: notificationEmail || null }
+  })
+}
+
 export function setUserAccessLevel(id, accessLevel) {
   return request({
     url: `/admin/users/${id}/access-level`,
@@ -56,5 +71,24 @@ export function sendUserEmail(id, data) {
     url: `/admin/users/${id}/email`,
     method: 'post',
     data
+  })
+}
+
+export function getImputationAccessRequests(params) {
+  return request({
+    url: '/admin/imputation/access-requests',
+    method: 'get',
+    params
+  })
+}
+
+export function decideImputationAccessRequest(id, decision, reviewNote) {
+  return request({
+    url: `/admin/imputation/access-requests/${encodeURIComponent(id)}/decision`,
+    method: 'post',
+    data: {
+      decision,
+      note: reviewNote || ''
+    }
   })
 }

@@ -22,3 +22,57 @@ export function searchSNP(data) {
     data
   })
 }
+
+export function getSnpFrequency(params) {
+  return request({
+    url: '/snp/frequency',
+    method: 'get',
+    params
+  })
+}
+
+export function getSnpAssemblies() {
+  return request({
+    url: '/snp/assemblies',
+    method: 'get'
+  })
+}
+
+export function getSvFrequency(params) {
+  return request({
+    url: '/sv/frequency',
+    method: 'get',
+    params
+  })
+}
+
+export function getSvAssemblies() {
+  return request({
+    url: '/sv/assemblies',
+    method: 'get'
+  })
+}
+
+export function getSvPopulations(params) {
+  return request({
+    url: '/sv/populations',
+    method: 'get',
+    params
+  })
+}
+
+export function getSnpBrowser(params) {
+  return request({
+    url: '/snp/browser',
+    method: 'get',
+    params
+  })
+}
+
+export function getSvBrowser(params) {
+  return request({
+    url: '/sv/browser',
+    method: 'get',
+    params
+  })
+}

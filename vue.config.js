@@ -2,26 +2,25 @@ const { defineConfig } = require('@vue/cli-service')
 
 module.exports = defineConfig({
   transpileDependencies: true,
-  
+
+  chainWebpack(config) {
+    const svgRule = config.module.rule('svg')
+    svgRule.delete('type')
+    svgRule.delete('generator')
+    svgRule.oneOf('source')
+      .resourceQuery(/source/)
+      .type('asset/source')
+    svgRule.oneOf('resource')
+      .type('asset/resource')
+      .set('generator', { filename: 'img/[name].[hash:8][ext]' })
+  },
+
   configureWebpack: {
     performance: {
       hints: false
-    },
-    optimization: {
-      splitChunks: {
-        chunks: 'all',
-        minSize: 20000,
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',  // 使用固定名称
-            chunks: 'all',
-          }
-        }
-      }
     }
   },
-  
+
   devServer: {
     hot: true,
     client: {
@@ -32,7 +31,7 @@ module.exports = defineConfig({
       'Access-Control-Allow-Origin': '*',
     }
   },
-  
+
   publicPath: process.env.VUE_APP_PUBLIC_PATH || '/cpc/',
   lintOnSave: false
 })

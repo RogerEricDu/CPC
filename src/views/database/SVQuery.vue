@@ -1,20 +1,26 @@
 <template>
   <div class="sv-query">
     <div class="query-form">
-      
-      <div class="form-group">
-        <label for="svType">SV Type:</label>
-        <select id="svType" v-model="queryParams.SVType" class="form-select">
-          <option value="">All Types</option>
-          <option value="DEL">Deletion (DEL)</option>
-          <option value="DUP">Duplication (DUP)</option>
-          <option value="INS">Insertion (INS)</option>
-          <option value="INV">Inversion (INV)</option>
-          <option value="BND">Breakend (BND)</option>
-        </select>
-      </div>
+      <ReferenceGenomeSwitch
+        :value="queryParams.assembly"
+        :assemblies="assemblies"
+        :disabled="loading"
+        @change="selectAssembly"
+      />
 
       <div class="form-row">
+        <div class="form-group">
+          <label for="svType">SV Type:</label>
+          <select id="svType" v-model="queryParams.SVType" class="form-select">
+            <option value="">All Types</option>
+            <option value="DEL">Deletion (DEL)</option>
+            <option value="DUP">Duplication (DUP)</option>
+            <option value="INS">Insertion (INS)</option>
+            <option value="INV">Inversion (INV)</option>
+            <option value="BND">Breakend (BND)</option>
+          </select>
+        </div>
+
         <div class="form-group">
           <label for="svChromosome">Chromosome:</label>
           <select id="svChromosome" v-model="queryParams.chromosome" class="form-select">
@@ -24,35 +30,24 @@
             </option>
           </select>
         </div>
-        
-        <div class="form-group">
-          <label for="uniqueId">SV ID:</label>
-          <input 
-            type="text" 
-            id="uniqueId"
-            v-model="queryParams.uniqueId"
-            placeholder="e.g., SV_001"
-            class="form-input"
-          >
-        </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label for="start">Start Position:</label>
-          <input 
-            type="number" 
+          <input
+            type="number"
             id="start"
             v-model.number="queryParams.start"
             placeholder="Start position"
             class="form-input"
           >
         </div>
-        
+
         <div class="form-group">
           <label for="end">End Position:</label>
-          <input 
-            type="number" 
+          <input
+            type="number"
             id="end"
             v-model.number="queryParams.end"
             placeholder="End position"
@@ -62,15 +57,28 @@
       </div>
 
       <div class="form-group">
-        <label for="population">Population:</label>
-        <select id="population" v-model="queryParams.population" class="form-select">
+        <label for="uniqueId">SV ID:</label>
+        <input
+          type="text"
+          id="uniqueId"
+          v-model="queryParams.uniqueId"
+          :placeholder="svIdPlaceholder"
+          class="form-input"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="svPopulation">Population:</label>
+        <select
+          id="svPopulation"
+          v-model="queryParams.population"
+          class="form-select"
+          :disabled="loading || populationsLoading"
+        >
           <option value="">All Populations</option>
-          <option value="han">Han Chinese</option>
-          <option value="zang">Tibetan</option>
-          <option value="miao">Miao</option>
-          <option value="mongolian">Mongolian</option>
-          <option value="southern">Southern Groups</option>
-          <option value="northern">Northern Groups</option>
+          <option v-for="population in populations" :key="population.id" :value="population.id">
+            {{ population.label }}
+          </option>
         </select>
       </div>
 
@@ -78,128 +86,136 @@
         <button @click="handleReset" class="reset-btn">
           Reset
         </button>
+        <button @click="handleViewAll" class="view-all-btn" :disabled="loading">
+          {{ loading && viewAllMode ? 'Loading...' : 'View all results' }}
+        </button>
         <button @click="handleQuery" :disabled="loading" class="query-btn">
           {{ loading ? 'Searching...' : 'Search SV' }}
         </button>
       </div>
     </div>
 
-    <!-- 结果展示 -->
-    <div v-if="results" class="results-section">
-      <div class="results-header">
-        <h3>SV Query Results</h3>
-        <div class="results-info">
-          Total: {{ total }} records
+    <div v-if="loading && !frequency" class="loading">
+      <div class="spinner"></div>
+      <span>Loading data...</span>
+    </div>
+
+    <div v-if="error" class="error-message">
+      <p>{{ error }}</p>
+    </div>
+
+    <template v-if="searched">
+      <div v-if="frequencyLoading && !frequency" class="loading">
+        <div class="spinner"></div>
+        <span>Loading population frequencies...</span>
+      </div>
+      <FrequencyMap
+        v-if="frequency"
+        ref="frequencyMap"
+        :frequency="frequency"
+        :preferred-population="queryParams.population"
+      />
+      <div v-else-if="frequencyError && !loading" class="warning-message">{{ frequencyError }}</div>
+
+      <template v-if="!loading">
+      <div v-if="results && results.length > 0" class="results-section">
+        <div class="results-header">
+          <h3>SV Query Results</h3>
+          <div class="results-info">Total: {{ total }} records</div>
         </div>
-      </div>
 
-      <!-- 分页控件 -->
-      <div class="pagination" v-if="total > 0">
-        <button 
-          @click="prevPage" 
-          :disabled="currentPage === 1"
-          class="page-btn"
-        >
-          Previous
-        </button>
-        <span class="page-info">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
-        <button 
-          @click="nextPage" 
-          :disabled="currentPage === totalPages"
-          class="page-btn"
-        >
-          Next
-        </button>
-      </div>
+        <div class="results-table">
+          <table>
+            <thead>
+              <tr>
+                <th>SV ID</th>
+                <th>Source ID</th>
+                <th>Type</th>
+                <th>Chromosome</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Size (bp)</th>
+                <th>Allele Frequency</th>
+                <th>Novelty</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="result in results"
+                :key="result.sourceId"
+                :class="{ selected: isSelected(result) }"
+                @click="result.frequencyAvailable && selectVariant(result)"
+              >
+                <td class="identifier">{{ result.id || 'N/A' }}</td>
+                <td class="source-id">{{ result.sourceId || 'N/A' }}</td>
+                <td>
+                  <span class="sv-type" :class="result.type ? result.type.toLowerCase() : ''">
+                    {{ result.type || 'N/A' }}
+                  </span>
+                </td>
+                <td>{{ result.chromosome || 'N/A' }}</td>
+                <td>{{ formatInteger(result.start) }}</td>
+                <td>{{ formatInteger(result.end) }}</td>
+                <td>{{ formatInteger(result.length) }}</td>
+                <td>{{ formatPercent(result.globalFrequency) }}</td>
+                <td>{{ result.novelty || 'N/A' }}</td>
+                <td class="row-actions" @click.stop>
+                  <button
+                    type="button"
+                    class="frequency-btn"
+                    :disabled="!result.frequencyAvailable"
+                    @click="selectVariant(result)"
+                  >Frequency</button>
+                  <button type="button" class="browser-btn" @click="openBrowser(result)">Genome browser</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <div class="results-table" v-if="results.length > 0">
-        <table>
-          <thead>
-            <tr>
-              <th>SV ID</th>
-              <th>Type</th>
-              <th>Chromosome</th>
-              <th>Start</th>
-              <th>End</th>
-              <th>Size (bp)</th>
-              <th>Population</th>
-              <th>Allele Frequency</th>
-              <th>Sequence</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="result in results" :key="result.svId">
-              <td>{{ result.uniqueId || 'N/A' }}</td>
-              <td>
-                <span class="sv-type" :class="result.SVType ? result.SVType.toLowerCase() : ''">
-                  {{ result.SVType || 'N/A' }}
-                </span>
-              </td>
-              <td>{{ result.chromosome || 'N/A' }}</td>
-              <td>{{ result.start ? result.start.toLocaleString() : 'N/A' }}</td>
-              <td>{{ result.end ? result.end.toLocaleString() : 'N/A' }}</td>
-              <td>{{ calculateSize(result) }}</td>
-              <td>{{ result.population || 'N/A' }}</td>
-              <td>{{ result.alleleFrequency ? result.alleleFrequency.toFixed(4) : 'N/A' }}</td>
-              <td class="sequence-cell">
-                <span v-if="result.sequence" :title="result.sequence">
-                  {{ truncateSequence(result.sequence) }}
-                </span>
-                <span v-else>N/A</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <VariantPagination
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          :disabled="loading"
+          @change="goToPage"
+        />
       </div>
 
       <div v-else class="no-results">
         <p>No results found</p>
       </div>
+      </template>
+    </template>
 
-      <!-- 分页控件 -->
-      <div class="pagination" v-if="total > 0">
-        <button 
-          @click="prevPage" 
-          :disabled="currentPage === 1"
-          class="page-btn"
-        >
-          Previous
-        </button>
-        <span class="page-info">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
-        <button 
-          @click="nextPage" 
-          :disabled="currentPage === totalPages"
-          class="page-btn"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-
-    <!-- 错误信息 -->
-    <div v-if="error" class="error-message">
-      <p>{{ error }}</p>
-    </div>
+    <GenomeBrowserModal
+      kind="sv"
+      :visible="browserVisible"
+      :variant="browserVariant"
+      @close="browserVisible = false"
+    />
   </div>
 </template>
 
 <script>
-import { searchSV } from '@/api/variant'
+import { getSvAssemblies, getSvFrequency, getSvPopulations, searchSV } from '@/api/variant'
+import FrequencyMap from '@/components/variant/FrequencyMap.vue'
+import GenomeBrowserModal from '@/components/variant/GenomeBrowserModal.vue'
+import ReferenceGenomeSwitch from '@/components/variant/ReferenceGenomeSwitch.vue'
+import VariantPagination from '@/components/variant/VariantPagination.vue'
 
 export default {
   name: 'SVQuery',
+  components: { FrequencyMap, GenomeBrowserModal, ReferenceGenomeSwitch, VariantPagination },
   data() {
     return {
       queryParams: {
+        assembly: 'CHM13v2.0',
+        population: '',
         chromosome: '',
         start: null,
         end: null,
         uniqueId: '',
-        population: '',
         SVType: '',
         page: 1,
         size: 10
@@ -210,93 +226,222 @@ export default {
       pageSize: 10,
       loading: false,
       error: null,
-      chromosomes: Array.from({length: 22}, (_, i) => `chr${i + 1}`).concat(['chrX', 'chrY'])
+      searched: false,
+      assemblies: [
+        { id: 'CHM13v2.0', label: 'CHM13v2.0', default: true },
+        { id: 'GRCh38', label: 'GRCh38', default: false }
+      ],
+      populations: [],
+      populationsLoading: false,
+      chromosomes: Array.from({ length: 22 }, (_, index) => `chr${index + 1}`).concat(['chrX', 'chrY']),
+      selectedVariant: null,
+      frequency: null,
+      frequencyLoading: false,
+      frequencyError: '',
+      frequencyRequestId: 0,
+      browserVisible: false,
+      browserVariant: null,
+      viewAllMode: false
     }
   },
   computed: {
     totalPages() {
-      return Math.ceil(this.total / this.pageSize)
+      return Math.max(1, Math.ceil(this.total / this.pageSize))
+    },
+    svIdPlaceholder() {
+      return this.queryParams.assembly === 'GRCh38'
+        ? 'e.g., chr1_10862_INS_76bp'
+        : 'e.g., chr1_11669_DEL_59bp'
     }
   },
+  created() {
+    this.loadAssemblies()
+  },
   methods: {
-    async handleQuery() {
-      this.loading = true
-      this.error = null
-      
+    async loadAssemblies() {
       try {
-        // 构建查询参数
-        const params = {
-          ...this.queryParams,
-          page: this.currentPage,
-          size: this.pageSize
+        const response = await getSvAssemblies()
+        if (!Array.isArray(response.data) || response.data.length === 0) return
+        this.assemblies = response.data
+        const selected = response.data.find(item => item.default) || response.data[0]
+        if (!response.data.some(item => item.id === this.queryParams.assembly)) {
+          this.queryParams.assembly = selected.id
         }
-
-        // 清理空参数
-        Object.keys(params).forEach(key => {
-          if (params[key] === '' || params[key] === null) {
-            delete params[key]
-          }
-        })
-
-        const response = await searchSV(params)
-        
-        this.results = response.data || []
-        this.total = response.total || 0
-        
-        if (this.results.length === 0) {
-          this.error = 'No results found for the given criteria.'
-        }
-      } catch (err) {
-        console.error('SV query error:', err)
-        this.error = 'Failed to search SV data. Please try again.'
-        this.results = []
-        this.total = 0
+      } catch (error) {
+        // Keep the built-in assembly options so the query endpoint can report availability.
       } finally {
-        this.loading = false
+        await this.loadPopulations()
       }
     },
+    async loadPopulations() {
+      this.populationsLoading = true
+      try {
+        const response = await getSvPopulations({ assembly: this.queryParams.assembly })
+        this.populations = Array.isArray(response.data) ? response.data : []
+        if (!this.populations.some(item => item.id === this.queryParams.population)) {
+          this.queryParams.population = ''
+        }
+      } catch (error) {
+        this.populations = []
+        this.queryParams.population = ''
+      } finally {
+        this.populationsLoading = false
+      }
+    },
+    selectAssembly(assembly) {
+      if (!assembly || assembly === this.queryParams.assembly || this.loading) return
+      this.queryParams.assembly = assembly
+      this.queryParams.population = ''
+      this.clearQueryOutput()
+      this.loadPopulations()
+    },
+    hasSearchCriteria() {
+      return Boolean(
+        this.queryParams.uniqueId.trim() ||
+        this.queryParams.population ||
+        this.queryParams.SVType ||
+        this.queryParams.chromosome ||
+        this.queryParams.start ||
+        this.queryParams.end
+      )
+    },
+    clearQueryOutput() {
+      this.frequencyRequestId++
+      this.results = null
+      this.total = 0
+      this.selectedVariant = null
+      this.frequency = null
+      this.frequencyLoading = false
+      this.frequencyError = ''
+      this.error = null
+      this.searched = false
+      this.viewAllMode = false
+    },
+    async handleQuery() {
+      if (this.loading) return
+      if (!this.hasSearchCriteria()) {
+        this.clearQueryOutput()
+        return
+      }
+      if (this.queryParams.start && this.queryParams.end && this.queryParams.end < this.queryParams.start) {
+        this.clearQueryOutput()
+        this.error = 'End position must be greater than or equal to start position.'
+        return
+      }
 
-    handleReset() {
+      this.currentPage = 1
+      await this.runQuery(false)
+    },
+    async handleViewAll() {
+      if (this.loading) return
       this.queryParams = {
+        assembly: this.queryParams.assembly,
+        population: '',
         chromosome: '',
         start: null,
         end: null,
         uniqueId: '',
+        SVType: '',
+        page: 1,
+        size: this.pageSize
+      }
+      this.currentPage = 1
+      await this.runQuery(true)
+    },
+    async runQuery(viewAll) {
+      this.viewAllMode = Boolean(viewAll)
+
+      this.loading = true
+      this.error = null
+      this.frequencyError = ''
+      this.searched = true
+
+      try {
+        const response = await searchSV({
+          ...this.queryParams,
+          uniqueId: this.queryParams.uniqueId.trim() || null,
+          page: this.currentPage,
+          size: this.pageSize,
+          viewAll: this.viewAllMode
+        })
+        this.results = response.data || []
+        this.total = Number(response.total || 0)
+        const initialVariant = this.results.find(variant => variant.frequencyAvailable)
+        if (initialVariant) {
+          await this.selectVariant(initialVariant)
+        } else {
+          this.selectedVariant = this.results[0] || null
+          this.frequency = null
+          if (this.results.length > 0) {
+            this.frequencyError = 'Population frequencies are not available for the variants on this page.'
+          }
+        }
+      } catch (error) {
+        this.results = []
+        this.total = 0
+        this.selectedVariant = null
+        this.frequency = null
+        this.error = (error.response && error.response.data && error.response.data.message) || 'Failed to search SV data. Please try again.'
+      } finally {
+        this.loading = false
+      }
+    },
+    async selectVariant(variant) {
+      if (!variant || !variant.frequencyAvailable) return
+      this.selectedVariant = variant
+      this.frequencyError = ''
+      const requestId = ++this.frequencyRequestId
+      this.frequencyLoading = true
+      try {
+        const response = await getSvFrequency({
+          id: variant.id,
+          assembly: variant.assembly || this.queryParams.assembly
+        })
+        if (requestId === this.frequencyRequestId) this.frequency = response.data
+      } catch (error) {
+        if (requestId === this.frequencyRequestId) {
+          this.frequency = null
+          this.frequencyError = (error.response && error.response.data && error.response.data.message) || 'Population frequencies are unavailable for this SV.'
+        }
+      } finally {
+        if (requestId === this.frequencyRequestId) this.frequencyLoading = false
+      }
+    },
+    isSelected(variant) {
+      return Boolean(this.selectedVariant && this.selectedVariant.sourceId === variant.sourceId)
+    },
+    openBrowser(variant) {
+      if (this.$refs.frequencyMap) this.$refs.frequencyMap.hideTooltip()
+      this.browserVariant = variant
+      this.browserVisible = true
+    },
+    handleReset() {
+      this.queryParams = {
+        assembly: this.queryParams.assembly,
         population: '',
+        chromosome: '',
+        start: null,
+        end: null,
+        uniqueId: '',
         SVType: '',
         page: 1,
         size: 10
       }
-      this.results = null
       this.currentPage = 1
-      this.error = null
+      this.clearQueryOutput()
     },
-
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++
-        this.handleQuery()
-      }
+    goToPage(targetPage) {
+      if (this.loading) return
+      const nextPage = Math.min(Math.max(1, Number(targetPage) || 1), this.totalPages)
+      if (nextPage === this.currentPage) return
+      this.currentPage = nextPage
+      this.runQuery(this.viewAllMode)
     },
-
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--
-        this.handleQuery()
-      }
+    formatPercent(value) {
+      return `${((Number(value) || 0) * 100).toFixed(3)}%`
     },
-
-    calculateSize(sv) {
-      if (sv.start && sv.end) {
-        return (sv.end - sv.start + 1).toLocaleString()
-      }
-      return 'N/A'
-    },
-
-    truncateSequence(sequence, maxLength = 20) {
-      if (!sequence) return 'N/A'
-      if (sequence.length <= maxLength) return sequence
-      return sequence.substring(0, maxLength) + '...'
+    formatInteger(value) {
+      return Number(value || 0).toLocaleString()
     }
   }
 }
@@ -393,6 +538,50 @@ label {
   background-color: #5a6268;
 }
 
+.view-all-btn {
+  min-width: 160px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  background: #315f93;
+  color: #fff;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.view-all-btn:hover:not(:disabled) {
+  background: #244a74;
+}
+
+.view-all-btn:disabled {
+  background: #c0c4cc;
+  cursor: not-allowed;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  color: #606266;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .results-section {
   margin-top: 30px;
 }
@@ -414,38 +603,6 @@ label {
   font-weight: 500;
 }
 
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  margin: 20px 0;
-}
-
-.page-btn {
-  padding: 8px 16px;
-  border: 1px solid #dcdfe6;
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.page-btn:hover:not(:disabled) {
-  border-color: var(--main-color);
-  color: var(--main-color);
-}
-
-.page-btn:disabled {
-  color: #ccc;
-  cursor: not-allowed;
-}
-
-.page-info {
-  color: #606266;
-  font-weight: 500;
-}
-
 .results-table {
   overflow-x: auto;
   margin: 20px 0;
@@ -453,6 +610,7 @@ label {
 
 table {
   width: 100%;
+  min-width: 1280px;
   border-collapse: collapse;
   background: white;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -464,6 +622,7 @@ th, td {
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #e4e7ed;
+  white-space: nowrap;
 }
 
 th {
@@ -478,6 +637,21 @@ tr:hover {
   background-color: #f5f7fa;
 }
 
+tr.selected {
+  background-color: #edf5ff;
+}
+
+.identifier {
+  color: #315f93;
+  font-weight: 600;
+}
+
+.source-id {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sv-type {
   padding: 4px 8px;
   border-radius: 4px;
@@ -485,35 +659,34 @@ tr:hover {
   font-weight: 500;
 }
 
-.sv-type.del {
-  background-color: #ffebee;
-  color: #c62828;
+.sv-type.del { background-color: #ffebee; color: #c62828; }
+.sv-type.dup { background-color: #e8f5e8; color: #2e7d32; }
+.sv-type.ins { background-color: #e3f2fd; color: #1565c0; }
+.sv-type.inv { background-color: #f3e5f5; color: #7b1fa2; }
+.sv-type.bnd { background-color: #fff3e0; color: #ef6c00; }
+
+.row-actions {
+  display: flex;
+  gap: 8px;
 }
 
-.sv-type.dup {
-  background-color: #e8f5e8;
-  color: #2e7d32;
+.row-actions button {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
 }
 
-.sv-type.ins {
-  background-color: #e3f2fd;
-  color: #1565c0;
+.row-actions button:disabled {
+  background: #c0c4cc;
+  cursor: not-allowed;
 }
 
-.sv-type.inv {
-  background-color: #f3e5f5;
-  color: #7b1fa2;
-}
-
-.sv-type.bnd {
-  background-color: #fff3e0;
-  color: #ef6c00;
-}
-
-.sequence-cell {
-  max-width: 200px;
-  word-break: break-all;
-}
+.frequency-btn { background: #2f6e9f; }
+.frequency-btn:hover:not(:disabled) { background: #24587f; }
+.browser-btn { background: #72558d; }
+.browser-btn:hover { background: #5d4475; }
 
 .no-results {
   text-align: center;
@@ -532,20 +705,26 @@ tr:hover {
   border: 1px solid #f5c6cb;
 }
 
+.error-message p { margin: 0; }
+
+.warning-message {
+  padding: 15px;
+  border: 1px solid #ebd19d;
+  border-radius: 4px;
+  background: #fff8e8;
+  color: #795515;
+}
+
 @media (max-width: 768px) {
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .results-header {
     flex-direction: column;
     gap: 10px;
     align-items: flex-start;
   }
-  
-  .pagination {
-    flex-direction: column;
-    gap: 10px;
-  }
+
 }
 </style>

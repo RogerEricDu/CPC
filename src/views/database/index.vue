@@ -68,6 +68,14 @@
         <i class="nav-icon">🔀</i>
         PanGraph
       </button>
+      <button
+        class="nav-btn"
+        :class="{ active: activeTab === 'tube-map' }"
+        @click="selectTab('tube-map')"
+      >
+        <i class="nav-icon">◎</i>
+        Sequence Tube Map
+      </button>
     </div>
 
     <!-- 内容区域 -->
@@ -75,36 +83,50 @@
       <div v-if="!canUseDatabase" class="login-required">
         <div class="lock-icon">🔒</div>
         <h3>Please log in to use the database tools.</h3>
-        <button @click="$router.push('/login?redirect=/database')">Login</button>
+        <p>Database tools are available after login with BASIC access.</p>
+        <button @click="goToLogin">Login</button>
       </div>
       <template v-else>
         <SNPQuery v-if="activeTab === 'snp'" />
         <SVQuery v-if="activeTab === 'sv'" />
         <ImputationTool v-if="activeTab === 'imputation'" />
         <Pangraph v-if="activeTab === 'pangraph'" />
+        <SequenceTubeMap v-if="activeTab === 'tube-map'" />
       </template>
     </div>
   </div>
 </template>
 
 <script>
-import SNPQuery from './SNPQuery.vue'
-import SVQuery from './SVQuery.vue'
-import ImputationTool from './ImputationTool.vue'
-import Pangraph from './Pangraph.vue';
 import { getCurrentUser, hasBasicAccess } from '@/utils/auth'
 
+const SNPQuery = () => import(/* webpackChunkName: "database-snp" */ './SNPQuery.vue')
+const SVQuery = () => import(/* webpackChunkName: "database-sv" */ './SVQuery.vue')
+const ImputationTool = () => import(/* webpackChunkName: "database-imputation" */ './ImputationTool.vue')
+const Pangraph = () => import(/* webpackChunkName: "database-pangraph" */ './Pangraph.vue')
+const SequenceTubeMap = () => import(/* webpackChunkName: "database-sequence-tube-map" */ './SequenceTubeMap.vue')
+
+const DATABASE_TABS = ['snp', 'sv', 'imputation', 'pangraph', 'tube-map']
+
 export default {
-  name: 'Database',
+  name: 'DatabasePortal',
   components: {
     SNPQuery,
     SVQuery,
     ImputationTool,
-    Pangraph
+    Pangraph,
+    SequenceTubeMap
   },
   data() {
+    const queryTab = String(this.$route.query.tab || '').toLowerCase()
+    let rememberedTab = ''
+    try {
+      rememberedTab = window.sessionStorage.getItem('cpc_database_active_tab') || ''
+    } catch (e) {
+      rememberedTab = ''
+    }
     return {
-      activeTab: 'snp',
+      activeTab: DATABASE_TABS.includes(queryTab) ? queryTab : (DATABASE_TABS.includes(rememberedTab) ? rememberedTab : 'snp'),
       currentUser: getCurrentUser()
     }
   },
@@ -115,6 +137,7 @@ export default {
   },
   mounted() {
     window.addEventListener('cpc-auth-changed', this.refreshUser)
+    this.persistTab(this.activeTab)
   },
   beforeDestroy() {
     window.removeEventListener('cpc-auth-changed', this.refreshUser)
@@ -124,9 +147,37 @@ export default {
       this.currentUser = getCurrentUser()
     },
     selectTab(tab) {
+      if (!DATABASE_TABS.includes(tab)) return
       this.activeTab = tab
-      if (!this.canUseDatabase) {
-        return
+      this.persistTab(tab)
+    },
+    persistTab(tab) {
+      try {
+        window.sessionStorage.setItem('cpc_database_active_tab', tab)
+      } catch (e) {
+        // Query state still keeps deep links stable when storage is disabled.
+      }
+      if (this.$route.query.tab === tab) return
+      this.$router.replace({
+        path: this.$route.path,
+        query: { ...this.$route.query, tab }
+      }).catch(() => {})
+    },
+    goToLogin() {
+      const redirect = this.$router.resolve({ path: '/database', query: { tab: this.activeTab } }).route.fullPath
+      this.$router.push({ path: '/login', query: { redirect } })
+    }
+  },
+  watch: {
+    '$route.query.tab'(value) {
+      const tab = String(value || '').toLowerCase()
+      if (DATABASE_TABS.includes(tab) && tab !== this.activeTab) {
+        this.activeTab = tab
+        try {
+          window.sessionStorage.setItem('cpc_database_active_tab', tab)
+        } catch (e) {
+          // No action needed.
+        }
       }
     }
   }
@@ -293,9 +344,10 @@ export default {
 /* 导航标签样式优化 */
 .database-nav {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   margin: 20px auto 40px auto;
-  max-width: 1000px;
+  max-width: 1180px;
   background: white;
   padding: 20px;
   border-radius: 20px;
