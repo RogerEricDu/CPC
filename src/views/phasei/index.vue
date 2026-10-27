@@ -212,7 +212,7 @@ export default {
   components: { MyTable },
   data() {
     return {
-      tableNums: Array.from({length:25}, (v,k) => k),
+      tableNums: Array.from({length:24}, (v,k) => k + 1),
       digits: [
         {digit: 116, description: 'high-quality and haplotype-phased de novo assemblies'},
         {digit: 58, description: 'core samples'},

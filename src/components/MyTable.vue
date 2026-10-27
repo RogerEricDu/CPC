@@ -1,7 +1,8 @@
 <template>
   <div>
     <h4>{{ tableName }}</h4>
-    <table class="table table-bordered table-striped table-hover table-sm " style="width:100%">
+    <p v-if="errorMessage" class="text-danger" role="alert">{{ errorMessage }}</p>
+    <table v-else class="table table-bordered table-striped table-hover table-sm " style="width:100%">
       <thead>
         <tr class="table-dark">
           <th scope="col" v-for="c in colHeader" :key="c">{{ c }}</th>
@@ -25,7 +26,8 @@ export default {
     return {
       tableName: '',
       colHeader: [],
-      tdata: []
+      tdata: [],
+      errorMessage: ''
     }
   },
   mounted() {
@@ -33,14 +35,29 @@ export default {
   },
   methods: {
     async getTableData() {
-      await axios.get(this.jsonPath).then(response => {
-        let { tableName, colHeader } = response.data[0]
-        console.log(this.jsonPath)
+      this.errorMessage = ''
+      try {
+        const { data } = await axios.get(this.jsonPath)
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error('Invalid supplementary table response')
+        }
+        const [metadata, ...rows] = data
+        if (!metadata || typeof metadata.tableName !== 'string' ||
+            !Array.isArray(metadata.colHeader) ||
+            !metadata.colHeader.every(header => typeof header === 'string') ||
+            !rows.every(row => row && typeof row === 'object' && !Array.isArray(row))) {
+          throw new Error('Invalid supplementary table data')
+        }
+        const { tableName, colHeader } = metadata
         this.tableName = tableName
         this.colHeader = colHeader
-        this.tdata = response.data
-        this.tdata.shift()
-      })
+        this.tdata = rows
+      } catch {
+        this.tableName = ''
+        this.colHeader = []
+        this.tdata = []
+        this.errorMessage = 'Unable to load this supplementary table.'
+      }
     }
   }
 }
